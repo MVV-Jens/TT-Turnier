@@ -1,8 +1,6 @@
 import Avatar from './Avatar.jsx';
 import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
 
-const EVENT_LABEL = '13.07.2026 · 16:30 Uhr';
-
 function BigPlayer({ player, align }) {
   return (
     <div className={`dash-player dash-player-${align}`} style={{ '--accent': player?.color }}>
@@ -25,7 +23,6 @@ export default function MatchDashboard({ live, participantsById, title = 'VR Tis
     <div className="beamer-screen dashboard">
       <header className="beamer-header">
         <h1 className="event-title">{title}</h1>
-        <span className="event-meta">{EVENT_LABEL}</span>
       </header>
 
       {current ? (

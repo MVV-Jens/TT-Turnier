@@ -188,7 +188,6 @@ export default function BeamerView({ state, live, participantsById }) {
       <div className="beamer-screen dashboard">
         <header className="beamer-header">
           <h1 className="event-title">{title}</h1>
-          <span className="event-meta">13.07.2026 · 16:30 Uhr</span>
         </header>
         <div className="dash-idle">
           <p className="dash-idle-text">Turnier wird vorbereitet …</p>
