@@ -11,7 +11,7 @@ const EVENT_LABEL = '13.07.2026 · 16:30 Uhr';
 function BigPlayer({ player, align }) {
   return (
     <div className={`dash-player dash-player-${align}`} style={{ '--accent': player?.color }}>
-      <Avatar avatar={player?.avatar} color={player?.color} size={200} />
+      <Avatar avatar={player?.avatar} color={player?.color} size="clamp(88px, 22vh, 240px)" />
       <span className="dash-player-name">{player?.name ?? 'TBD'}</span>
     </div>
   );
@@ -61,11 +61,11 @@ export default function MatchDashboard({ matches, participantsById }) {
           <span className="next-label">Als Nächstes</span>
           {next ? (
             <div className="next-players">
-              <Avatar avatar={nextA?.avatar} color={nextA?.color} size={54} />
+              <Avatar avatar={nextA?.avatar} color={nextA?.color} size="clamp(38px, 6vh, 56px)" />
               <span className="next-name">{nextA?.name ?? 'Sieger'}</span>
               <span className="next-vs">vs</span>
               <span className="next-name">{nextB?.name ?? 'Sieger'}</span>
-              <Avatar avatar={nextB?.avatar} color={nextB?.color} size={54} />
+              <Avatar avatar={nextB?.avatar} color={nextB?.color} size="clamp(38px, 6vh, 56px)" />
               <span className="next-round">{next.roundName}</span>
             </div>
           ) : (

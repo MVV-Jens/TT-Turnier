@@ -61,6 +61,14 @@ select {
   display: flex;
   flex-direction: column;
 }
+/* Beamer mode fills the screen exactly and never scrolls. */
+.app-beamer {
+  height: 100vh;
+  overflow: hidden;
+}
+.app-beamer.is-idle {
+  cursor: none;
+}
 
 .topbar {
   display: flex;
@@ -75,20 +83,54 @@ select {
   z-index: 30;
 }
 
-.topbar-floating {
+/* Auto-hiding control cluster on the beamer, tucked into the bottom-right. */
+.beamer-controls {
   position: fixed;
-  top: 14px;
-  right: 16px;
-  left: auto;
+  bottom: 18px;
+  right: 20px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 6px 8px;
-  background: rgba(8, 11, 26, 0.55);
-  opacity: 0.55;
-  transition: opacity 0.2s ease;
+  background: rgba(8, 11, 26, 0.72);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
-.topbar-floating:hover {
+.beamer-controls.is-visible {
   opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.beamer-exit,
+.beamer-fs {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.beamer-exit {
+  background: linear-gradient(90deg, var(--cyan), var(--turquoise));
+  color: #04121a;
+  border-color: transparent;
+}
+.beamer-exit:hover,
+.beamer-fs:hover {
+  filter: brightness(1.12);
+}
+.beamer-controls-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding-right: 4px;
 }
 
 .topbar-brand {
@@ -658,16 +700,18 @@ select {
 /* ============================ Beamer base ============================ */
 .beamer-wrap {
   position: relative;
-  height: calc(100vh - 0px);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 .beamer-screen {
-  min-height: 100vh;
-  padding: 3.5vh 3.5vw;
+  height: 100vh;
+  overflow: hidden;
+  padding: 3vh 3vw;
   display: flex;
   flex-direction: column;
 }
 .beamer-fade {
+  height: 100%;
   animation: fadeIn 0.6s ease;
 }
 @keyframes fadeIn {
@@ -683,8 +727,8 @@ select {
 
 .view-dots {
   position: fixed;
-  bottom: 20px;
-  right: 22px;
+  bottom: 22px;
+  left: 24px;
   display: flex;
   gap: 8px;
   z-index: 20;
@@ -705,21 +749,33 @@ select {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding-right: 260px;
+  gap: 2px;
+  flex-shrink: 0;
 }
 .beamer-header.compact {
-  margin-bottom: 1vh;
+  margin-bottom: 0.5vh;
+}
+.beamer-header.compact .event-title {
+  font-size: clamp(1.1rem, 2.4vw, 2rem);
+}
+.beamer-header.compact .event-meta {
+  font-size: clamp(0.75rem, 1.2vw, 1.1rem);
 }
 .event-title {
   margin: 0;
-  font-size: clamp(2rem, 4.5vw, 4rem);
+  font-size: clamp(2rem, 4.6vw, 4.2rem);
   font-weight: 900;
   letter-spacing: 0.5px;
-  background: linear-gradient(90deg, var(--cyan), var(--ice), var(--turquoise));
+  line-height: 1.02;
+  background: linear-gradient(90deg, var(--cyan), var(--ice), var(--pink), var(--yellow), var(--cyan));
+  background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  animation: titleShimmer 8s linear infinite;
+}
+@keyframes titleShimmer {
+  to { background-position: 250% 0; }
 }
 .event-meta {
   font-size: clamp(1rem, 1.6vw, 1.6rem);
@@ -733,36 +789,58 @@ select {
 }
 .phase-banner {
   align-self: center;
-  margin-top: 1vh;
+  margin-top: 0.5vh;
   font-size: clamp(1.4rem, 2.6vw, 2.4rem);
   text-transform: uppercase;
   color: var(--yellow);
-  padding: 8px 28px;
+  padding: 8px 30px;
   border: 2px solid #5c4a12;
   border-radius: 999px;
   background: #201a05;
+  box-shadow: 0 0 0 0 #facc1555;
+  animation: bannerPulse 2.4s ease-in-out infinite;
+}
+@keyframes bannerPulse {
+  0%, 100% { box-shadow: 0 0 22px #facc1522; transform: scale(1); }
+  50% { box-shadow: 0 0 42px #facc1566; transform: scale(1.03); }
 }
 
 .dash-match {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 2vw;
-  padding: 2vh 0;
+  padding: 1vh 0;
 }
 .dash-player {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2vh;
+  gap: 1.4vh;
+  min-width: 0;
+}
+.dash-player .avatar {
+  animation: floaty 3.2s ease-in-out infinite;
+}
+.dash-player-right .avatar {
+  animation-delay: 1.6s;
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
 }
 .dash-player-name {
-  font-size: clamp(1.8rem, 4vw, 4rem);
+  font-size: clamp(1.6rem, 3.8vw, 4rem);
   font-weight: 900;
   text-align: center;
   color: #fff;
-  text-shadow: 0 0 30px var(--accent, transparent);
+  text-shadow: 0 0 34px var(--accent, transparent), 0 0 8px var(--accent, transparent);
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dash-versus {
   display: flex;
@@ -771,10 +849,15 @@ select {
   gap: 8px;
 }
 .dash-vs-text {
-  font-size: clamp(2.5rem, 6vw, 6rem);
+  font-size: clamp(2.5rem, 6.4vw, 6.4rem);
   font-weight: 900;
   color: var(--pink);
-  text-shadow: 0 0 40px #f472b666;
+  text-shadow: 0 0 40px #f472b688;
+  animation: vsPulse 1.6s ease-in-out infinite;
+}
+@keyframes vsPulse {
+  0%, 100% { transform: scale(1) rotate(-3deg); text-shadow: 0 0 30px #f472b666; }
+  50% { transform: scale(1.14) rotate(3deg); text-shadow: 0 0 60px #f472b6cc; }
 }
 .dash-target {
   font-size: clamp(1rem, 1.8vw, 1.6rem);
@@ -804,14 +887,15 @@ select {
 .dash-footer {
   display: flex;
   flex-direction: column;
-  gap: 2vh;
+  gap: 1.2vh;
+  flex-shrink: 0;
 }
 .next-match {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 1.5vh 2vw;
+  padding: 1.2vh 2vw;
   background: rgba(13, 18, 40, 0.7);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -859,7 +943,7 @@ select {
 }
 .progress-track {
   flex: 1;
-  height: 18px;
+  height: 20px;
   background: #131a38;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -867,9 +951,14 @@ select {
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--cyan), var(--turquoise), var(--yellow));
+  background: linear-gradient(90deg, var(--cyan), var(--turquoise), var(--yellow), var(--pink), var(--cyan));
+  background-size: 200% 100%;
   border-radius: 999px;
   transition: width 0.6s ease;
+  animation: progressFlow 3s linear infinite;
+}
+@keyframes progressFlow {
+  to { background-position: 200% 0; }
 }
 .progress-text {
   font-size: clamp(1rem, 1.6vw, 1.4rem);
@@ -887,8 +976,8 @@ select {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(8px, 1.4vw, 26px);
-  margin-top: 1.5vh;
+  gap: clamp(6px, 1.2vw, 22px);
+  margin-top: 0.6vh;
   min-height: 0;
 }
 .bracket-col {
@@ -899,31 +988,33 @@ select {
 .bracket-col-title {
   text-align: center;
   font-weight: 900;
-  font-size: clamp(0.9rem, 1.5vw, 1.5rem);
+  font-size: clamp(0.72rem, 1.3vw, 1.35rem);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--ice);
-  margin-bottom: 10px;
-  padding-bottom: 8px;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
   border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
 }
 .bracket-col-matches {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
-  gap: 8px;
+  justify-content: space-between;
+  gap: clamp(3px, 0.7vh, 10px);
 }
 
 .bracket-match {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px;
+  border-radius: 10px;
+  padding: clamp(3px, 0.6vh, 8px);
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: clamp(2px, 0.4vh, 5px);
 }
 .bracket-match-status {
   position: absolute;
@@ -1064,8 +1155,8 @@ select {
 .bracket-player {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
+  gap: 7px;
+  padding: clamp(2px, 0.4vh, 5px) 8px;
   border-radius: 8px;
   background: var(--bg-2);
   min-width: 0;
@@ -1083,8 +1174,8 @@ select {
   font-style: italic;
 }
 .bracket-avatar-empty {
-  width: 34px;
-  height: 34px;
+  width: clamp(16px, 2.3vh, 32px);
+  height: clamp(16px, 2.3vh, 32px);
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -8,7 +8,7 @@ function BracketPlayer({ player, score, isWinner, isBye, placeholder }) {
       style={{ '--accent': player?.color }}
     >
       {player ? (
-        <Avatar avatar={player.avatar} color={player.color} size={34} />
+        <Avatar avatar={player.avatar} color={player.color} size="clamp(16px, 2.3vh, 32px)" />
       ) : (
         <span className="bracket-avatar-empty">{isBye ? '—' : '?'}</span>
       )}

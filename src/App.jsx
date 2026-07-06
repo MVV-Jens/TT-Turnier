@@ -7,6 +7,7 @@ export default function App() {
   const { state, dispatch, matches, participantsById } = useTournament();
   const [mode, setMode] = useState('admin'); // 'admin' | 'beamer'
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -35,42 +36,79 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [toggleFullscreen]);
 
+  // In beamer mode the controls auto-hide (with the cursor) after a few seconds
+  // of inactivity and reappear on any mouse move / key press.
+  useEffect(() => {
+    if (mode !== 'beamer') {
+      setControlsVisible(true);
+      return undefined;
+    }
+    let hideTimer;
+    const reveal = () => {
+      setControlsVisible(true);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => setControlsVisible(false), 3000);
+    };
+    reveal();
+    window.addEventListener('mousemove', reveal);
+    window.addEventListener('keydown', reveal);
+    window.addEventListener('touchstart', reveal);
+    return () => {
+      clearTimeout(hideTimer);
+      window.removeEventListener('mousemove', reveal);
+      window.removeEventListener('keydown', reveal);
+      window.removeEventListener('touchstart', reveal);
+    };
+  }, [mode]);
+
+  const idle = mode === 'beamer' && !controlsVisible;
+
   return (
-    <div className={`app app-${mode}`}>
-      <div className={`topbar ${mode === 'beamer' ? 'topbar-floating' : ''}`}>
-        {mode === 'admin' && (
+    <div className={`app app-${mode} ${idle ? 'is-idle' : ''}`}>
+      {mode === 'admin' ? (
+        <div className="topbar">
           <div className="topbar-brand">
             <span className="brand-mark">🏓</span>
             <span className="brand-text">VR Tischtennis Cup 2026</span>
           </div>
-        )}
-        <div className="topbar-actions">
-          <div className="mode-switch">
+          <div className="topbar-actions">
+            <div className="mode-switch">
+              <button type="button" className="active" onClick={() => setMode('admin')}>
+                Admin
+              </button>
+              <button type="button" onClick={() => setMode('beamer')}>Beamer</button>
+            </div>
             <button
               type="button"
-              className={mode === 'admin' ? 'active' : ''}
-              onClick={() => setMode('admin')}
+              className="icon-btn topbar-fs"
+              title={isFullscreen ? 'Vollbild beenden (F)' : 'Vollbild (F)'}
+              onClick={toggleFullscreen}
             >
-              Admin
-            </button>
-            <button
-              type="button"
-              className={mode === 'beamer' ? 'active' : ''}
-              onClick={() => setMode('beamer')}
-            >
-              Beamer
+              {isFullscreen ? '🗗' : '⛶'}
             </button>
           </div>
+        </div>
+      ) : (
+        <div className={`beamer-controls ${controlsVisible ? 'is-visible' : ''}`}>
           <button
             type="button"
-            className="icon-btn topbar-fs"
+            className="beamer-exit"
+            title="Zurück zum Admin (Taste B)"
+            onClick={() => setMode('admin')}
+          >
+            ⚙ Admin
+          </button>
+          <button
+            type="button"
+            className="beamer-fs"
             title={isFullscreen ? 'Vollbild beenden (F)' : 'Vollbild (F)'}
             onClick={toggleFullscreen}
           >
-            {isFullscreen ? '🗗' : '⛶'}
+            {isFullscreen ? '🗗 Fenster' : '⛶ Vollbild'}
           </button>
+          <span className="beamer-controls-hint">Taste B · F</span>
         </div>
-      </div>
+      )}
 
       <main className="app-main">
         {mode === 'admin' ? (
