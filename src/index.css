@@ -1353,6 +1353,23 @@ select {
   padding: 10px 12px;
   font-size: 1rem;
 }
+.config-title-field {
+  margin-bottom: 4px;
+}
+.title-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.title-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
 
 .rating {
   font-weight: 800;

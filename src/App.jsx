@@ -23,6 +23,12 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
+  useEffect(() => {
+    document.title = state.config.title
+      ? `${state.config.title} – Turnier`
+      : 'VR Tischtennis Cup 2026';
+  }, [state.config.title]);
+
   // Keyboard shortcuts: B = beamer/admin toggle, F = fullscreen, Esc handled by browser.
   useEffect(() => {
     const onKey = (e) => {
@@ -69,7 +75,7 @@ export default function App() {
         <div className="topbar">
           <div className="topbar-brand">
             <span className="brand-mark">🏓</span>
-            <span className="brand-text">VR Tischtennis Cup 2026</span>
+            <span className="brand-text">{state.config.title || 'VR Tischtennis Cup'}</span>
           </div>
           <div className="topbar-actions">
             <div className="mode-switch">

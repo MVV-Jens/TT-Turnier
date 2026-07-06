@@ -12,7 +12,7 @@ function BigPlayer({ player, align }) {
   );
 }
 
-export default function MatchDashboard({ live, participantsById }) {
+export default function MatchDashboard({ live, participantsById, title = 'VR Tischtennis Cup' }) {
   const { matches, champion: championId, progress } = live;
   const champion = participantsById[championId];
   const current = getCurrentMatch(matches);
@@ -24,7 +24,7 @@ export default function MatchDashboard({ live, participantsById }) {
   return (
     <div className="beamer-screen dashboard">
       <header className="beamer-header">
-        <h1 className="event-title">VR Tischtennis Cup</h1>
+        <h1 className="event-title">{title}</h1>
         <span className="event-meta">{EVENT_LABEL}</span>
       </header>
 

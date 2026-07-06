@@ -6,7 +6,7 @@ const STORAGE_KEY = 'vr-tt-cup-2026';
 
 const initialState = {
   participants: [], // { id, name, avatar, color }
-  config: { tables: 1, minutes: 90, setLength: 'short' },
+  config: { tables: 1, minutes: 90, setLength: 'short', title: 'VR Tischtennis Cup' },
   tournament: null, // { format, order, options }
   results: {}, // { matchId: { a, b } }
   slushieBreak: false,

@@ -38,7 +38,9 @@ export default function Configurator({ state, dispatch, onStart }) {
   const P = state.participants.length;
   const { tables, minutes, setLength } = state.config;
   const [customMinutes, setCustomMinutes] = useState(String(minutes));
-  const isCustom = !TIME_PRESETS.includes(minutes);
+  const [timeMode, setTimeMode] = useState(
+    TIME_PRESETS.includes(minutes) ? 'preset' : 'custom',
+  );
 
   const rec = useMemo(
     () => (P >= MIN_PLAYERS ? recommend(P, tables, minutes, setLength) : null),
@@ -67,6 +69,18 @@ export default function Configurator({ state, dispatch, onStart }) {
         sinnvollsten Modus vor.
       </p>
 
+      <label className="config-field config-title-field">
+        <span className="field-label">Turniername</span>
+        <input
+          className="title-input"
+          type="text"
+          maxLength={40}
+          value={state.config.title ?? ''}
+          placeholder="VR Tischtennis Cup"
+          onChange={(e) => setConfig({ title: e.target.value })}
+        />
+      </label>
+
       <div className="config-grid">
         <div className="config-field">
           <span className="field-label">Platten</span>
@@ -80,23 +94,29 @@ export default function Configurator({ state, dispatch, onStart }) {
         <div className="config-field">
           <span className="field-label">Verfügbare Zeit</span>
           <Segmented
-            value={isCustom ? 'custom' : minutes}
+            value={timeMode === 'custom' ? 'custom' : minutes}
             onChange={(v) => {
-              if (v === 'custom') setConfig({ minutes: Number(customMinutes) || 90 });
-              else setConfig({ minutes: v });
+              if (v === 'custom') {
+                setTimeMode('custom');
+                setConfig({ minutes: Number(customMinutes) || 90 });
+              } else {
+                setTimeMode('preset');
+                setConfig({ minutes: v });
+              }
             }}
             options={[
               ...TIME_PRESETS.map((m) => ({ value: m, label: `${m} Min` })),
               { value: 'custom', label: 'Custom' },
             ]}
           />
-          {isCustom && (
+          {timeMode === 'custom' && (
             <input
               className="custom-minutes"
               type="number"
               min="15"
               max="600"
               value={customMinutes}
+              placeholder="Minuten"
               onChange={(e) => {
                 setCustomMinutes(e.target.value);
                 const n = Number(e.target.value);

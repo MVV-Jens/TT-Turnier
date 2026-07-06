@@ -18,7 +18,7 @@ function viewForNow() {
   return Math.floor(Date.now() / SWITCH_INTERVAL) % 2 === 0 ? 'dashboard' : 'overview';
 }
 
-function Overview({ live, participantsById, highlightId, currentId }) {
+function Overview({ live, participantsById, highlightId, currentId, title }) {
   const { format, matches, groups, standings } = live;
   const koMatches = matches.filter((m) => m.phase === 'ko');
   const currentIds = currentId
@@ -28,7 +28,12 @@ function Overview({ live, participantsById, highlightId, currentId }) {
   switch (format) {
     case 'ko':
       return (
-        <BracketView matches={matches} participantsById={participantsById} highlightId={highlightId} />
+        <BracketView
+          matches={matches}
+          participantsById={participantsById}
+          highlightId={highlightId}
+          subtitle={`${title} · K.o.`}
+        />
       );
     case 'round_robin':
       return (
@@ -95,6 +100,7 @@ export default function BeamerView({ state, live, participantsById }) {
 
   const champion = participantsById[live.champion];
   const matches = live.matches;
+  const title = state.config?.title || 'VR Tischtennis Cup';
 
   // Reset celebration tracking whenever a tournament starts / is reset.
   useEffect(() => {
@@ -166,7 +172,7 @@ export default function BeamerView({ state, live, participantsById }) {
   }, [showLoop]);
 
   if (champion) {
-    return <WinnerScreen champion={champion} />;
+    return <WinnerScreen champion={champion} title={title} />;
   }
 
   if (celebration) {
@@ -181,7 +187,7 @@ export default function BeamerView({ state, live, participantsById }) {
     return (
       <div className="beamer-screen dashboard">
         <header className="beamer-header">
-          <h1 className="event-title">VR Tischtennis Cup</h1>
+          <h1 className="event-title">{title}</h1>
           <span className="event-meta">13.07.2026 · 16:30 Uhr</span>
         </header>
         <div className="dash-idle">
@@ -200,13 +206,14 @@ export default function BeamerView({ state, live, participantsById }) {
     <div className="beamer-wrap">
       <div className="beamer-fade" key={`${view}-${highlightId ?? ''}`}>
         {view === 'dashboard' ? (
-          <MatchDashboard live={live} participantsById={participantsById} />
+          <MatchDashboard live={live} participantsById={participantsById} title={title} />
         ) : (
           <Overview
             live={live}
             participantsById={participantsById}
             highlightId={highlightId}
             currentId={current?.id}
+            title={title}
           />
         )}
       </div>
