@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ParticipantRow } from './AvatarPicker.jsx';
 import { DEMO_NAMES } from '../data/content.js';
-import { BRACKET_SIZE } from '../logic/tournament.js';
+import { MIN_PLAYERS, MAX_PLAYERS } from '../logic/formats.js';
+
+const DEMO_TARGET = 16;
 
 export default function ParticipantManager({ state, dispatch }) {
   const [bulk, setBulk] = useState('');
@@ -19,19 +21,19 @@ export default function ParticipantManager({ state, dispatch }) {
   };
 
   const loadDemo = () => {
-    const remaining = DEMO_NAMES.slice(0, Math.max(0, BRACKET_SIZE - count));
+    const remaining = DEMO_NAMES.slice(0, Math.max(0, DEMO_TARGET - count));
     if (remaining.length === 0) return;
     dispatch({ type: 'ADD_PARTICIPANTS', names: remaining });
   };
 
-  const statusClass = count > BRACKET_SIZE ? 'is-over' : count >= 2 ? 'is-ok' : 'is-low';
+  const statusClass = count > MAX_PLAYERS ? 'is-over' : count >= MIN_PLAYERS ? 'is-ok' : 'is-low';
 
   return (
     <section className="panel">
       <div className="panel-head">
         <h2 className="panel-title">Teilnehmer</h2>
         <span className={`count-badge ${statusClass}`}>
-          {count} / {BRACKET_SIZE}
+          {count} / {MAX_PLAYERS}
         </span>
       </div>
 
@@ -56,16 +58,14 @@ export default function ParticipantManager({ state, dispatch }) {
         </div>
       </div>
 
-      {count > BRACKET_SIZE && (
+      {count > MAX_PLAYERS && (
         <p className="hint hint-warn">
-          Mehr als {BRACKET_SIZE} Teilnehmer – bei der Auslosung werden die ersten{' '}
-          {BRACKET_SIZE} zufällig gesetzt.
+          Mehr als {MAX_PLAYERS} Teilnehmer – es werden die ersten {MAX_PLAYERS} gesetzt.
         </p>
       )}
-      {count > 0 && count < BRACKET_SIZE && (
+      {count > 0 && count < MIN_PLAYERS && (
         <p className="hint">
-          {BRACKET_SIZE - count} freie {BRACKET_SIZE - count === 1 ? 'Platz' : 'Plätze'} –
-          werden als Freilos vergeben.
+          Mindestens {MIN_PLAYERS} Teilnehmer für ein Turnier.
         </p>
       )}
 

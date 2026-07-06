@@ -1,5 +1,20 @@
 import Avatar from './Avatar.jsx';
-import { getCurrentMatch, matchesByRound } from '../logic/tournament.js';
+import { getCurrentMatch } from '../logic/engine.js';
+
+function groupByRound(matches) {
+  const map = new Map();
+  matches.forEach((m) => {
+    if (!map.has(m.round)) map.set(m.round, []);
+    map.get(m.round).push(m);
+  });
+  return [...map.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([round, ms]) => ({
+      round,
+      name: ms[0].roundName,
+      matches: [...ms].sort((x, y) => x.index - y.index),
+    }));
+}
 
 function BracketPlayer({ player, score, isWinner, isBye, placeholder }) {
   return (
@@ -55,20 +70,25 @@ function BracketMatch({ match, participantsById, isCurrent, isJustWon }) {
   );
 }
 
-export default function BracketView({ matches, participantsById, highlightId = null }) {
-  const rounds = matchesByRound(matches);
+export default function BracketView({ matches, participantsById, highlightId = null, subtitle }) {
+  const koMatches = matches.filter((m) => m.phase === 'ko');
+  const rounds = groupByRound(koMatches);
   const current = getCurrentMatch(matches);
+  const lastRound = rounds.length - 1;
 
   return (
     <div className="beamer-screen bracket-screen">
       <header className="beamer-header compact">
         <h1 className="event-title">Turnierbaum</h1>
-        <span className="event-meta">VR Tischtennis Cup · 16er K.o.</span>
+        <span className="event-meta">{subtitle || 'VR Tischtennis Cup · K.o.'}</span>
       </header>
 
       <div className="bracket-grid">
         {rounds.map((round) => (
-          <div key={round.key} className={`bracket-col col-${round.key}`}>
+          <div
+            key={round.round}
+            className={`bracket-col ${round.round === lastRound ? 'col-F' : ''}`}
+          >
             <div className="bracket-col-title">{round.name}</div>
             <div className="bracket-col-matches">
               {round.matches.map((m) => (

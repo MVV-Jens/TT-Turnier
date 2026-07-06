@@ -4,7 +4,7 @@ import AdminPanel from './components/AdminPanel.jsx';
 import BeamerView from './components/BeamerView.jsx';
 
 export default function App() {
-  const { state, dispatch, matches, participantsById } = useTournament();
+  const { state, dispatch, live, participantsById } = useTournament();
   const [mode, setMode] = useState('admin'); // 'admin' | 'beamer'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -115,13 +115,13 @@ export default function App() {
           <AdminPanel
             state={state}
             dispatch={dispatch}
-            matches={matches}
+            live={live}
             participantsById={participantsById}
           />
         ) : (
           <BeamerView
             state={state}
-            matches={matches}
+            live={live}
             participantsById={participantsById}
           />
         )}

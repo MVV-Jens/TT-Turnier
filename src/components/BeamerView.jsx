@@ -1,46 +1,120 @@
 import { useEffect, useRef, useState } from 'react';
 import MatchDashboard from './MatchDashboard.jsx';
 import BracketView from './BracketView.jsx';
+import StandingsView from './StandingsView.jsx';
+import GroupsView from './GroupsView.jsx';
 import SlushieBreak from './SlushieBreak.jsx';
 import WinnerScreen from './WinnerScreen.jsx';
 import MatchCelebration from './MatchCelebration.jsx';
-import { getChampion, FINAL_MATCH_ID } from '../logic/tournament.js';
+import { MODES } from '../logic/formats.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
 const CELEBRATE_MS = 5000; // confetti celebration screen
-const HIGHLIGHT_MS = 7000; // animated bracket highlight afterwards
+const HIGHLIGHT_MS = 7000; // animated highlight afterwards
 
 // Derive the current view from the shared wall clock so that every beamer
 // window flips at the exact same moment – no cross-window messaging needed.
 function viewForNow() {
-  return Math.floor(Date.now() / SWITCH_INTERVAL) % 2 === 0 ? 'dashboard' : 'bracket';
+  return Math.floor(Date.now() / SWITCH_INTERVAL) % 2 === 0 ? 'dashboard' : 'overview';
 }
 
-export default function BeamerView({ state, matches, participantsById }) {
+function Overview({ live, participantsById, highlightId, currentId }) {
+  const { format, matches, groups, standings } = live;
+  const koMatches = matches.filter((m) => m.phase === 'ko');
+  const currentIds = currentId
+    ? [matches.find((m) => m.id === currentId)?.playerA, matches.find((m) => m.id === currentId)?.playerB]
+    : [];
+
+  switch (format) {
+    case 'ko':
+      return (
+        <BracketView matches={matches} participantsById={participantsById} highlightId={highlightId} />
+      );
+    case 'round_robin':
+      return (
+        <StandingsView
+          standings={standings}
+          participantsById={participantsById}
+          currentIds={currentIds}
+          title="Tabelle"
+          subtitle="Jeder gegen Jeden"
+        />
+      );
+    case 'swiss':
+      return (
+        <StandingsView
+          standings={standings}
+          participantsById={participantsById}
+          currentIds={currentIds}
+          title="Tabelle"
+          subtitle="Schweizer System"
+        />
+      );
+    case 'groups_final':
+      return (
+        <GroupsView
+          groups={groups}
+          participantsById={participantsById}
+          currentIds={currentIds}
+          qualifyCount={1}
+          title="Gruppen"
+          subtitle="Gruppensieger ins Finale"
+        />
+      );
+    case 'groups_ko':
+      if (koMatches.length > 0) {
+        return (
+          <BracketView
+            matches={matches}
+            participantsById={participantsById}
+            highlightId={highlightId}
+            subtitle="K.o.-Phase"
+          />
+        );
+      }
+      return (
+        <GroupsView
+          groups={groups}
+          participantsById={participantsById}
+          currentIds={currentIds}
+          qualifyCount={2}
+          title="Gruppen"
+          subtitle="Top 2 kommen weiter"
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+export default function BeamerView({ state, live, participantsById }) {
   const [view, setView] = useState(viewForNow);
-  const [celebration, setCelebration] = useState(null); // { matchId, winner, scoreText, roundName }
+  const [celebration, setCelebration] = useState(null);
   const [highlightId, setHighlightId] = useState(null);
   const seenRef = useRef(null);
 
-  const champion = participantsById[getChampion(matches)];
+  const champion = participantsById[live.champion];
+  const matches = live.matches;
 
-  // Detect a newly won match (excluding the final – that triggers the big
-  // WinnerScreen instead) and kick off the celebration sequence.
+  // Reset celebration tracking whenever a tournament starts / is reset.
+  useEffect(() => {
+    seenRef.current = null;
+    setCelebration(null);
+    setHighlightId(null);
+  }, [state.tournament]);
+
+  // Detect a newly won match and kick off the celebration – but not the match
+  // that crowns the champion (that shows the big WinnerScreen instead).
   useEffect(() => {
     const finished = matches.filter((m) => !m.bye && m.winner);
     const finishedIds = new Set(finished.map((m) => m.id));
-
     if (seenRef.current === null) {
-      // First render: remember what's already done without celebrating.
       seenRef.current = finishedIds;
       return;
     }
-
-    const newlyWon = finished.filter(
-      (m) => !seenRef.current.has(m.id) && m.id !== FINAL_MATCH_ID,
-    );
+    const newlyWon = finished.filter((m) => !seenRef.current.has(m.id));
     seenRef.current = finishedIds;
-
+    if (live.champion) return;
     const latest = newlyWon[newlyWon.length - 1];
     const winner = latest && participantsById[latest.winner];
     if (winner) {
@@ -51,14 +125,13 @@ export default function BeamerView({ state, matches, participantsById }) {
       setHighlightId(null);
       setCelebration({ matchId: latest.id, winner, scoreText, roundName: latest.roundName });
     }
-  }, [matches, participantsById]);
+  }, [matches, participantsById, live.champion]);
 
-  // Celebration → animated bracket highlight → back to normal loop.
   useEffect(() => {
     if (!celebration) return undefined;
     const id = setTimeout(() => {
       setHighlightId(celebration.matchId);
-      setView('bracket');
+      setView('overview');
       setCelebration(null);
     }, CELEBRATE_MS);
     return () => clearTimeout(id);
@@ -70,18 +143,13 @@ export default function BeamerView({ state, matches, participantsById }) {
     return () => clearTimeout(id);
   }, [highlightId]);
 
-  // Clear any celebration when the bracket is reset/redrawn.
-  useEffect(() => {
-    if (!state.draw) {
-      setCelebration(null);
-      setHighlightId(null);
-    }
-  }, [state.draw]);
-
   const showLoop =
-    !champion && !state.slushieBreak && !celebration && !highlightId;
+    Boolean(state.tournament) &&
+    !champion &&
+    !state.slushieBreak &&
+    !celebration &&
+    !highlightId;
 
-  // Auto-switch dashboard <-> bracket, aligned to 20s wall-clock boundaries.
   useEffect(() => {
     if (!showLoop) return undefined;
     setView(viewForNow());
@@ -109,7 +177,7 @@ export default function BeamerView({ state, matches, participantsById }) {
     return <SlushieBreak />;
   }
 
-  if (!state.draw) {
+  if (!state.tournament) {
     return (
       <div className="beamer-screen dashboard">
         <header className="beamer-header">
@@ -118,29 +186,35 @@ export default function BeamerView({ state, matches, participantsById }) {
         </header>
         <div className="dash-idle">
           <p className="dash-idle-text">Turnier wird vorbereitet …</p>
-          <p className="dash-idle-sub">Teilnehmer erfassen und auslosen im Admin-Bereich.</p>
+          <p className="dash-idle-sub">
+            Im Admin-Bereich Teilnehmer erfassen und Modus starten.
+          </p>
         </div>
       </div>
     );
   }
 
+  const current = matches.find((m) => !m.bye && m.playerA && m.playerB && !m.winner);
+
   return (
     <div className="beamer-wrap">
       <div className="beamer-fade" key={`${view}-${highlightId ?? ''}`}>
         {view === 'dashboard' ? (
-          <MatchDashboard matches={matches} participantsById={participantsById} />
+          <MatchDashboard live={live} participantsById={participantsById} />
         ) : (
-          <BracketView
-            matches={matches}
+          <Overview
+            live={live}
             participantsById={participantsById}
             highlightId={highlightId}
+            currentId={current?.id}
           />
         )}
       </div>
       <div className="view-dots" aria-hidden="true">
         <span className={view === 'dashboard' ? 'dot active' : 'dot'} />
-        <span className={view === 'bracket' ? 'dot active' : 'dot'} />
+        <span className={view === 'overview' ? 'dot active' : 'dot'} />
       </div>
+      <div className="beamer-mode-tag">{MODES[live.format]?.short}</div>
     </div>
   );
 }

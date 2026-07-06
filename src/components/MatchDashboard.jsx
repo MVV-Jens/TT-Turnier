@@ -1,10 +1,5 @@
 import Avatar from './Avatar.jsx';
-import {
-  getChampion,
-  getCurrentMatch,
-  getNextMatch,
-  getProgress,
-} from '../logic/tournament.js';
+import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
 
 const EVENT_LABEL = '13.07.2026 · 16:30 Uhr';
 
@@ -17,11 +12,11 @@ function BigPlayer({ player, align }) {
   );
 }
 
-export default function MatchDashboard({ matches, participantsById }) {
-  const champion = participantsById[getChampion(matches)];
+export default function MatchDashboard({ live, participantsById }) {
+  const { matches, champion: championId, progress } = live;
+  const champion = participantsById[championId];
   const current = getCurrentMatch(matches);
   const next = getNextMatch(matches, current?.id);
-  const progress = getProgress(matches);
 
   const nextA = participantsById[next?.playerA];
   const nextB = participantsById[next?.playerB];
@@ -40,7 +35,9 @@ export default function MatchDashboard({ matches, participantsById }) {
             <BigPlayer player={participantsById[current.playerA]} align="left" />
             <div className="dash-versus">
               <span className="dash-vs-text">VS</span>
-              <span className="dash-target">bis {current.target} Punkte</span>
+              <span className="dash-target">
+                {current.bestOf === 3 ? 'Best of 3 · bis 11' : `bis ${current.target} Punkte`}
+              </span>
             </div>
             <BigPlayer player={participantsById[current.playerB]} align="right" />
           </div>
