@@ -115,6 +115,10 @@ function reducer(state, action) {
     case 'RESET_ALL': {
       return { ...initialState };
     }
+    case 'HYDRATE': {
+      // Replace state with the version persisted by another browser window.
+      return { ...initialState, ...action.state };
+    }
     default:
       return state;
   }
@@ -123,13 +127,35 @@ function reducer(state, action) {
 export function useTournament() {
   const [state, dispatch] = useReducer(reducer, undefined, load);
 
+  // Persist to localStorage. Only write when the serialized value actually
+  // changed – this prevents a save/hydrate ping-pong between windows.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const serialized = JSON.stringify(state);
+      if (localStorage.getItem(STORAGE_KEY) !== serialized) {
+        localStorage.setItem(STORAGE_KEY, serialized);
+      }
     } catch {
       // Ignore storage quota / private mode errors – app still works in memory.
     }
   }, [state]);
+
+  // Live sync across browser windows/tabs of the same origin. The `storage`
+  // event fires in every OTHER window when localStorage is updated, so admin
+  // changes appear on the beamer window instantly (and vice versa).
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== STORAGE_KEY) return;
+      try {
+        const incoming = e.newValue ? JSON.parse(e.newValue) : initialState;
+        dispatch({ type: 'HYDRATE', state: incoming });
+      } catch {
+        // Ignore malformed payloads.
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const participantsById = useMemo(
     () => Object.fromEntries(state.participants.map((p) => [p.id, p])),

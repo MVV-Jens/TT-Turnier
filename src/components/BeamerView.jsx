@@ -7,18 +7,31 @@ import { getChampion } from '../logic/tournament.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
 
+// Derive the current view from the shared wall clock so that every beamer
+// window flips at the exact same moment – no cross-window messaging needed.
+function viewForNow() {
+  return Math.floor(Date.now() / SWITCH_INTERVAL) % 2 === 0 ? 'dashboard' : 'bracket';
+}
+
 export default function BeamerView({ state, matches, participantsById }) {
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState(viewForNow);
   const champion = participantsById[getChampion(matches)];
   const showLoop = !champion && !state.slushieBreak;
 
-  // Auto-switch dashboard <-> bracket every 20s while the loop is active.
+  // Auto-switch dashboard <-> bracket, aligned to 20s wall-clock boundaries.
   useEffect(() => {
     if (!showLoop) return undefined;
-    const id = setInterval(() => {
-      setView((v) => (v === 'dashboard' ? 'bracket' : 'dashboard'));
-    }, SWITCH_INTERVAL);
-    return () => clearInterval(id);
+    setView(viewForNow());
+    let timeoutId;
+    const scheduleNext = () => {
+      const msToBoundary = SWITCH_INTERVAL - (Date.now() % SWITCH_INTERVAL);
+      timeoutId = setTimeout(() => {
+        setView(viewForNow());
+        scheduleNext();
+      }, msToBoundary);
+    };
+    scheduleNext();
+    return () => clearTimeout(timeoutId);
   }, [showLoop]);
 
   if (champion) {
