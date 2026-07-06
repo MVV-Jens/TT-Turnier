@@ -1,12 +1,5 @@
 import Avatar from './Avatar.jsx';
-import {
-  getChampion,
-  getCurrentMatch,
-  getNextMatch,
-  getProgress,
-} from '../logic/tournament.js';
-
-const EVENT_LABEL = '13.07.2026 · 16:30 Uhr';
+import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
 
 function BigPlayer({ player, align }) {
   return (
@@ -17,11 +10,11 @@ function BigPlayer({ player, align }) {
   );
 }
 
-export default function MatchDashboard({ matches, participantsById }) {
-  const champion = participantsById[getChampion(matches)];
+export default function MatchDashboard({ live, participantsById, title = 'VR Tischtennis Cup' }) {
+  const { matches, champion: championId, progress } = live;
+  const champion = participantsById[championId];
   const current = getCurrentMatch(matches);
   const next = getNextMatch(matches, current?.id);
-  const progress = getProgress(matches);
 
   const nextA = participantsById[next?.playerA];
   const nextB = participantsById[next?.playerB];
@@ -29,8 +22,7 @@ export default function MatchDashboard({ matches, participantsById }) {
   return (
     <div className="beamer-screen dashboard">
       <header className="beamer-header">
-        <h1 className="event-title">VR Tischtennis Cup</h1>
-        <span className="event-meta">{EVENT_LABEL}</span>
+        <h1 className="event-title">{title}</h1>
       </header>
 
       {current ? (
@@ -40,7 +32,9 @@ export default function MatchDashboard({ matches, participantsById }) {
             <BigPlayer player={participantsById[current.playerA]} align="left" />
             <div className="dash-versus">
               <span className="dash-vs-text">VS</span>
-              <span className="dash-target">bis {current.target} Punkte</span>
+              <span className="dash-target">
+                {current.bestOf === 3 ? 'Best of 3 · bis 11' : `bis ${current.target} Punkte`}
+              </span>
             </div>
             <BigPlayer player={participantsById[current.playerB]} align="right" />
           </div>

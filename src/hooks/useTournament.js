@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useReducer } from 'react';
-import { makeId, createDraw, computeMatches } from '../logic/tournament.js';
+import { makeId, buildTournament, computeTournament } from '../logic/engine.js';
 import { randomAvatar, nextRandomAvatar, randomColor } from '../data/avatars.js';
 
 const STORAGE_KEY = 'vr-tt-cup-2026';
 
 const initialState = {
   participants: [], // { id, name, avatar, color }
-  draw: null, // { slots: [16] }
-  scores: {}, // { matchId: { a, b } }
+  config: { tables: 1, minutes: 90, setLength: 'short', title: 'VR Tischtennis Cup' },
+  tournament: null, // { format, order, options }
+  results: {}, // { matchId: { a, b } }
   slushieBreak: false,
 };
 
@@ -79,28 +80,31 @@ function reducer(state, action) {
         })),
       };
     }
-    case 'DRAW': {
-      if (state.participants.length < 2) return state;
-      return {
-        ...state,
-        draw: createDraw(state.participants.map((p) => p.id)),
-        scores: {},
-        slushieBreak: false,
-      };
+    case 'SET_CONFIG': {
+      return { ...state, config: { ...state.config, ...action.config } };
     }
-    case 'SET_SCORE': {
+    case 'START_TOURNAMENT': {
+      if (state.participants.length < 4) return state;
+      const tournament = buildTournament(
+        action.format,
+        state.participants.map((p) => p.id),
+        state.config.setLength,
+      );
+      return { ...state, tournament, results: {}, slushieBreak: false };
+    }
+    case 'SET_RESULT': {
       return {
         ...state,
-        scores: {
-          ...state.scores,
+        results: {
+          ...state.results,
           [action.matchId]: { a: action.a, b: action.b },
         },
       };
     }
-    case 'CLEAR_SCORE': {
-      const next = { ...state.scores };
+    case 'CLEAR_RESULT': {
+      const next = { ...state.results };
       delete next[action.matchId];
-      return { ...state, scores: next };
+      return { ...state, results: next };
     }
     case 'TOGGLE_SLUSHIE': {
       return { ...state, slushieBreak: !state.slushieBreak };
@@ -109,15 +113,19 @@ function reducer(state, action) {
       return { ...state, slushieBreak: action.value };
     }
     case 'RESET_BRACKET': {
-      // Keep participants, clear the tournament progress.
-      return { ...state, draw: null, scores: {}, slushieBreak: false };
+      // Keep participants + config, clear the running tournament.
+      return { ...state, tournament: null, results: {}, slushieBreak: false };
     }
     case 'RESET_ALL': {
       return { ...initialState };
     }
     case 'HYDRATE': {
       // Replace state with the version persisted by another browser window.
-      return { ...initialState, ...action.state };
+      return {
+        ...initialState,
+        ...action.state,
+        config: { ...initialState.config, ...(action.state.config || {}) },
+      };
     }
     default:
       return state;
@@ -162,10 +170,10 @@ export function useTournament() {
     [state.participants],
   );
 
-  const matches = useMemo(
-    () => computeMatches(state.draw, state.scores),
-    [state.draw, state.scores],
+  const live = useMemo(
+    () => computeTournament(state.tournament, state.results),
+    [state.tournament, state.results],
   );
 
-  return { state, dispatch, matches, participantsById };
+  return { state, dispatch, live, participantsById };
 }

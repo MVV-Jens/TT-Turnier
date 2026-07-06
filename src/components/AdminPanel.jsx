@@ -1,107 +1,116 @@
 import { useState } from 'react';
 import ParticipantManager from './ParticipantManager.jsx';
+import Configurator from './Configurator.jsx';
 import ResultEntry from './ResultEntry.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
-import {
-  getChampion,
-  getCurrentMatch,
-  getNextMatch,
-  getProgress,
-} from '../logic/tournament.js';
+import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
+import { MODES, SET_LENGTHS, calcMode, RATING_META } from '../logic/formats.js';
 
-export default function AdminPanel({ state, dispatch, matches, participantsById }) {
-  const [confirm, setConfirm] = useState(null); // { type: 'draw' | 'resetBracket' | 'resetAll' }
-
-  const hasDraw = Boolean(state.draw);
-  const champion = participantsById[getChampion(matches)];
-  const current = getCurrentMatch(matches);
-  const next = getNextMatch(matches, current?.id);
-  const progress = getProgress(matches);
-  const canDraw = state.participants.length >= 2;
+export default function AdminPanel({ state, dispatch, live, participantsById }) {
+  const [confirm, setConfirm] = useState(null); // { type: 'resetBracket' | 'resetAll' }
+  const hasTournament = Boolean(state.tournament);
+  const champion = participantsById[live.champion];
+  const current = getCurrentMatch(live.matches);
+  const next = getNextMatch(live.matches, current?.id);
+  const progress = live.progress;
 
   const runConfirm = () => {
     if (!confirm) return;
-    if (confirm.type === 'draw') dispatch({ type: 'DRAW' });
     if (confirm.type === 'resetBracket') dispatch({ type: 'RESET_BRACKET' });
     if (confirm.type === 'resetAll') dispatch({ type: 'RESET_ALL' });
     setConfirm(null);
   };
 
   const confirmConfig = {
-    draw: {
-      title: 'Neu auslosen?',
-      message: 'Der Turnierbaum wird zufällig neu erstellt. Bereits eingetragene Ergebnisse gehen verloren.',
-      confirmLabel: 'Auslosen',
-      danger: false,
-    },
     resetBracket: {
       title: 'Turnier zurücksetzen?',
-      message: 'Alle Ergebnisse und die Auslosung werden gelöscht. Die Teilnehmer bleiben erhalten.',
+      message: 'Alle Ergebnisse werden gelöscht und du kehrst zum Konfigurator zurück. Die Teilnehmer bleiben erhalten.',
       confirmLabel: 'Zurücksetzen',
       danger: true,
     },
     resetAll: {
       title: 'Komplett zurücksetzen?',
-      message: 'Teilnehmer, Avatare, Auslosung und Ergebnisse werden vollständig gelöscht.',
+      message: 'Teilnehmer, Avatare, Konfiguration und Ergebnisse werden vollständig gelöscht.',
       confirmLabel: 'Alles löschen',
       danger: true,
     },
   };
 
+  if (!hasTournament) {
+    return (
+      <div className="admin">
+        <div className="admin-col">
+          <ParticipantManager state={state} dispatch={dispatch} />
+        </div>
+        <div className="admin-col">
+          <Configurator state={state} dispatch={dispatch} />
+        </div>
+        <ConfirmDialog
+          open={Boolean(confirm)}
+          {...(confirm ? confirmConfig[confirm.type] : {})}
+          onConfirm={runConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      </div>
+    );
+  }
+
+  const P = state.participants.length;
+  const { tables, minutes, setLength } = state.config;
+  const calc = calcMode(live.format, P, tables, minutes, setLength);
+  const nameOf = (id, fallback = 'Sieger') => participantsById[id]?.name ?? fallback;
+
   return (
     <div className="admin">
       <div className="admin-col">
-        <ParticipantManager state={state} dispatch={dispatch} />
-
         <section className="panel">
-          <h2 className="panel-title">Turniersteuerung</h2>
+          <div className="panel-head">
+            <h2 className="panel-title">Turnier läuft</h2>
+            <span className="phase-pill">{MODES[live.format].short}</span>
+          </div>
 
-          <button
-            type="button"
-            className="btn btn-accent btn-block btn-lg"
-            disabled={!canDraw}
-            onClick={() => (hasDraw ? setConfirm({ type: 'draw' }) : dispatch({ type: 'DRAW' }))}
-          >
-            🎯 {hasDraw ? 'Neu auslosen' : 'Turnier auslosen'}
-          </button>
-          {!canDraw && (
-            <p className="hint">Mindestens 2 Teilnehmer nötig, um auszulosen.</p>
-          )}
-
-          {hasDraw && (
-            <div className="status-grid">
-              <div className="status-cell">
-                <span className="status-label">Phase</span>
-                <span className="status-value">
-                  {champion ? 'Beendet' : current ? current.roundName : '—'}
-                </span>
-              </div>
-              <div className="status-cell">
-                <span className="status-label">Fortschritt</span>
-                <span className="status-value">
-                  {progress.played} / {progress.total}
-                </span>
-              </div>
-              <div className="status-cell">
-                <span className="status-label">Aktuell</span>
-                <span className="status-value small">
-                  {current
-                    ? `${participantsById[current.playerA]?.name} vs ${participantsById[current.playerB]?.name}`
-                    : champion
-                      ? '🏆 Champion steht fest'
-                      : '—'}
-                </span>
-              </div>
-              <div className="status-cell">
-                <span className="status-label">Als Nächstes</span>
-                <span className="status-value small">
-                  {next
-                    ? `${participantsById[next.playerA]?.name ?? 'Sieger'} vs ${participantsById[next.playerB]?.name ?? 'Sieger'}`
-                    : '—'}
-                </span>
-              </div>
+          <div className="setup-recap">
+            <div className="recap-cell"><span>Teilnehmer</span><strong>{P}</strong></div>
+            <div className="recap-cell"><span>Platten</span><strong>{tables === 4 ? '4+' : tables}</strong></div>
+            <div className="recap-cell"><span>Satzlänge</span><strong>{SET_LENGTHS[setLength].label}</strong></div>
+            <div className="recap-cell"><span>Zeitfenster</span><strong>{minutes} Min</strong></div>
+            <div className="recap-cell"><span>Geschätzt</span><strong>{calc.duration} Min</strong></div>
+            <div className="recap-cell">
+              <span>Bewertung</span>
+              <strong>{RATING_META[calc.rating].icon} {RATING_META[calc.rating].label}</strong>
             </div>
-          )}
+          </div>
+
+          <div className="status-grid">
+            <div className="status-cell">
+              <span className="status-label">Phase</span>
+              <span className="status-value">
+                {champion ? 'Beendet' : current ? current.roundName : '—'}
+              </span>
+            </div>
+            <div className="status-cell">
+              <span className="status-label">Fortschritt</span>
+              <span className="status-value">
+                {progress.played} / {progress.total}
+              </span>
+            </div>
+            <div className="status-cell">
+              <span className="status-label">Aktuell</span>
+              <span className="status-value small">
+                {current
+                  ? `${nameOf(current.playerA)} vs ${nameOf(current.playerB)}`
+                  : champion
+                    ? '🏆 Champion steht fest'
+                    : '—'}
+              </span>
+            </div>
+            <div className="status-cell">
+              <span className="status-label">Als Nächstes</span>
+              <span className="status-value small">
+                {next ? `${nameOf(next.playerA)} vs ${nameOf(next.playerB)}` : '—'}
+              </span>
+            </div>
+          </div>
 
           <div className="control-row">
             <button
@@ -124,10 +133,9 @@ export default function AdminPanel({ state, dispatch, matches, participantsById 
             <button
               type="button"
               className="btn btn-ghost"
-              disabled={!hasDraw}
               onClick={() => setConfirm({ type: 'resetBracket' })}
             >
-              Turnier zurücksetzen
+              Zurück zum Konfigurator
             </button>
             <button
               type="button"
@@ -144,7 +152,7 @@ export default function AdminPanel({ state, dispatch, matches, participantsById 
         <ResultEntry
           state={state}
           dispatch={dispatch}
-          matches={matches}
+          live={live}
           participantsById={participantsById}
         />
       </div>

@@ -4,7 +4,7 @@ import Confetti from './Confetti.jsx';
 import { randomWinnerQuote } from '../data/content.js';
 
 // Renders the champion card to an offscreen canvas and triggers a PNG download.
-function exportImage(champion, quote) {
+function exportImage(champion, quote, title) {
   const w = 1280;
   const h = 720;
   const canvas = document.createElement('canvas');
@@ -24,7 +24,7 @@ function exportImage(champion, quote) {
 
   ctx.font = 'bold 40px "Segoe UI", system-ui, sans-serif';
   ctx.fillStyle = '#22d3ee';
-  ctx.fillText('VR TISCHTENNIS CUP 2026', w / 2, 90);
+  ctx.fillText((title || 'VR Tischtennis Cup').toUpperCase(), w / 2, 90);
 
   ctx.font = '120px "Segoe UI Emoji", system-ui, sans-serif';
   ctx.fillText('🏆', w / 2, 210);
@@ -50,7 +50,7 @@ function exportImage(champion, quote) {
   link.click();
 }
 
-export default function WinnerScreen({ champion }) {
+export default function WinnerScreen({ champion, title }) {
   const quote = useMemo(() => randomWinnerQuote(), [champion?.id]);
 
   if (!champion) return null;
@@ -60,7 +60,7 @@ export default function WinnerScreen({ champion }) {
       <Confetti active />
       <div className="winner-content">
         <div className="winner-trophy">🏆</div>
-        <span className="winner-kicker">Champion des VR Tischtennis Cup</span>
+        <span className="winner-kicker">Champion · {title || 'VR Tischtennis Cup'}</span>
         <div className="winner-avatar">
           <Avatar avatar={champion.avatar} color={champion.color} size={260} />
         </div>
@@ -69,7 +69,7 @@ export default function WinnerScreen({ champion }) {
         <button
           type="button"
           className="btn btn-accent btn-lg winner-export"
-          onClick={() => exportImage(champion, quote)}
+          onClick={() => exportImage(champion, quote, title)}
         >
           📸 Als Bild speichern
         </button>

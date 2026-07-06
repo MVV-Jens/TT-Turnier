@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Avatar from './Avatar.jsx';
-import {
-  getCurrentMatch,
-  validateScore,
-} from '../logic/tournament.js';
+import { getCurrentMatch, playableMatches, validateScore } from '../logic/engine.js';
 
-function PlayerLine({ player, score, onScore, side, disabled }) {
+function PlayerLine({ player, score, onScore, side }) {
   return (
     <div className="result-player" style={{ '--accent': player?.color }}>
       <Avatar avatar={player?.avatar} color={player?.color} size={52} />
@@ -15,51 +12,40 @@ function PlayerLine({ player, score, onScore, side, disabled }) {
         type="number"
         min="0"
         inputMode="numeric"
-        aria-label={`Punkte ${side}`}
+        aria-label={`Ergebnis ${side}`}
         value={score}
-        disabled={disabled}
         onChange={(e) => onScore(e.target.value)}
       />
     </div>
   );
 }
 
-export default function ResultEntry({ state, dispatch, matches, participantsById }) {
-  // All matches that are ready to be played or already have a result and can be edited.
-  const openMatches = useMemo(
-    () =>
-      matches.filter((m) => !m.bye && m.playerA && m.playerB),
-    [matches],
-  );
-
-  const current = getCurrentMatch(matches);
+export default function ResultEntry({ state, dispatch, live, participantsById }) {
+  const openMatches = useMemo(() => playableMatches(live.matches), [live.matches]);
+  const current = getCurrentMatch(live.matches);
   const [selectedId, setSelectedId] = useState(current?.id ?? null);
 
-  // Follow the live "current match" unless the user has deliberately picked
-  // a match that is still open.
+  // Follow the live "current match" unless the user picked a still-open one.
   useEffect(() => {
     const stillValid = openMatches.some((m) => m.id === selectedId && !m.winner);
     if (!stillValid) setSelectedId(current?.id ?? null);
   }, [current?.id, openMatches, selectedId]);
 
-  const selected =
-    openMatches.find((m) => m.id === selectedId) || current || null;
-
-  const stored = selected ? state.scores[selected.id] : null;
+  const selected = openMatches.find((m) => m.id === selectedId) || current || null;
+  const stored = selected ? state.results[selected.id] : null;
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
 
-  // Reset local inputs when switching matches.
   useEffect(() => {
     setScoreA(stored?.a != null ? String(stored.a) : '');
     setScoreB(stored?.b != null ? String(stored.b) : '');
   }, [selected?.id, stored?.a, stored?.b]);
 
-  if (!state.draw) {
+  if (!state.tournament) {
     return (
       <section className="panel">
         <h2 className="panel-title">Ergebniserfassung</h2>
-        <p className="hint">Erst auslosen – dann können Ergebnisse eingetragen werden.</p>
+        <p className="hint">Erst ein Turnier starten – dann können Ergebnisse eingetragen werden.</p>
       </section>
     );
   }
@@ -75,7 +61,8 @@ export default function ResultEntry({ state, dispatch, matches, participantsById
 
   const playerA = participantsById[selected.playerA];
   const playerB = participantsById[selected.playerB];
-  const validation = validateScore(scoreA, scoreB, selected.target);
+  const isBo3 = selected.bestOf === 3;
+  const validation = validateScore(scoreA, scoreB, selected);
   const winnerName =
     validation.ok && scoreA !== '' && scoreB !== ''
       ? Number(scoreA) > Number(scoreB)
@@ -85,12 +72,7 @@ export default function ResultEntry({ state, dispatch, matches, participantsById
 
   const save = () => {
     if (!validation.ok) return;
-    dispatch({
-      type: 'SET_SCORE',
-      matchId: selected.id,
-      a: Number(scoreA),
-      b: Number(scoreB),
-    });
+    dispatch({ type: 'SET_RESULT', matchId: selected.id, a: Number(scoreA), b: Number(scoreB) });
   };
 
   return (
@@ -123,8 +105,15 @@ export default function ResultEntry({ state, dispatch, matches, participantsById
       )}
 
       <p className="target-hint">
-        Spiel bis <strong>{selected.target}</strong> Punkte
-        {selected.target === 11 ? ' (Finale)' : ''}
+        {isBo3 ? (
+          <>
+            <strong>Best of 3</strong> · Sätze eintragen (2 gewinnt, z. B. 2:1)
+          </>
+        ) : (
+          <>
+            Spiel bis <strong>{selected.target}</strong> Punkte
+          </>
+        )}
       </p>
 
       <div className="result-grid">
@@ -155,7 +144,7 @@ export default function ResultEntry({ state, dispatch, matches, participantsById
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => dispatch({ type: 'CLEAR_SCORE', matchId: selected.id })}
+            onClick={() => dispatch({ type: 'CLEAR_RESULT', matchId: selected.id })}
           >
             Ergebnis löschen
           </button>

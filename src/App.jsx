@@ -4,7 +4,7 @@ import AdminPanel from './components/AdminPanel.jsx';
 import BeamerView from './components/BeamerView.jsx';
 
 export default function App() {
-  const { state, dispatch, matches, participantsById } = useTournament();
+  const { state, dispatch, live, participantsById } = useTournament();
   const [mode, setMode] = useState('admin'); // 'admin' | 'beamer'
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -22,6 +22,12 @@ export default function App() {
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
+
+  useEffect(() => {
+    document.title = state.config.title
+      ? `${state.config.title} – Turnier`
+      : 'VR Tischtennis Cup 2026';
+  }, [state.config.title]);
 
   // Keyboard shortcuts: B = beamer/admin toggle, F = fullscreen, Esc handled by browser.
   useEffect(() => {
@@ -69,7 +75,7 @@ export default function App() {
         <div className="topbar">
           <div className="topbar-brand">
             <span className="brand-mark">🏓</span>
-            <span className="brand-text">VR Tischtennis Cup 2026</span>
+            <span className="brand-text">{state.config.title || 'VR Tischtennis Cup'}</span>
           </div>
           <div className="topbar-actions">
             <div className="mode-switch">
@@ -115,13 +121,13 @@ export default function App() {
           <AdminPanel
             state={state}
             dispatch={dispatch}
-            matches={matches}
+            live={live}
             participantsById={participantsById}
           />
         ) : (
           <BeamerView
             state={state}
-            matches={matches}
+            live={live}
             participantsById={participantsById}
           />
         )}
