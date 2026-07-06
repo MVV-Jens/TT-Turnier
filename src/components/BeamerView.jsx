@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MatchDashboard from './MatchDashboard.jsx';
 import BracketView from './BracketView.jsx';
 import SlushieBreak from './SlushieBreak.jsx';
 import WinnerScreen from './WinnerScreen.jsx';
-import { getChampion } from '../logic/tournament.js';
+import MatchCelebration from './MatchCelebration.jsx';
+import { getChampion, FINAL_MATCH_ID } from '../logic/tournament.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
+const CELEBRATE_MS = 5000; // confetti celebration screen
+const HIGHLIGHT_MS = 7000; // animated bracket highlight afterwards
 
 // Derive the current view from the shared wall clock so that every beamer
 // window flips at the exact same moment – no cross-window messaging needed.
@@ -15,8 +18,68 @@ function viewForNow() {
 
 export default function BeamerView({ state, matches, participantsById }) {
   const [view, setView] = useState(viewForNow);
+  const [celebration, setCelebration] = useState(null); // { matchId, winner, scoreText, roundName }
+  const [highlightId, setHighlightId] = useState(null);
+  const seenRef = useRef(null);
+
   const champion = participantsById[getChampion(matches)];
-  const showLoop = !champion && !state.slushieBreak;
+
+  // Detect a newly won match (excluding the final – that triggers the big
+  // WinnerScreen instead) and kick off the celebration sequence.
+  useEffect(() => {
+    const finished = matches.filter((m) => !m.bye && m.winner);
+    const finishedIds = new Set(finished.map((m) => m.id));
+
+    if (seenRef.current === null) {
+      // First render: remember what's already done without celebrating.
+      seenRef.current = finishedIds;
+      return;
+    }
+
+    const newlyWon = finished.filter(
+      (m) => !seenRef.current.has(m.id) && m.id !== FINAL_MATCH_ID,
+    );
+    seenRef.current = finishedIds;
+
+    const latest = newlyWon[newlyWon.length - 1];
+    const winner = latest && participantsById[latest.winner];
+    if (winner) {
+      const scoreText =
+        latest.winner === latest.playerA
+          ? `${latest.scoreA}:${latest.scoreB}`
+          : `${latest.scoreB}:${latest.scoreA}`;
+      setHighlightId(null);
+      setCelebration({ matchId: latest.id, winner, scoreText, roundName: latest.roundName });
+    }
+  }, [matches, participantsById]);
+
+  // Celebration → animated bracket highlight → back to normal loop.
+  useEffect(() => {
+    if (!celebration) return undefined;
+    const id = setTimeout(() => {
+      setHighlightId(celebration.matchId);
+      setView('bracket');
+      setCelebration(null);
+    }, CELEBRATE_MS);
+    return () => clearTimeout(id);
+  }, [celebration]);
+
+  useEffect(() => {
+    if (!highlightId) return undefined;
+    const id = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(id);
+  }, [highlightId]);
+
+  // Clear any celebration when the bracket is reset/redrawn.
+  useEffect(() => {
+    if (!state.draw) {
+      setCelebration(null);
+      setHighlightId(null);
+    }
+  }, [state.draw]);
+
+  const showLoop =
+    !champion && !state.slushieBreak && !celebration && !highlightId;
 
   // Auto-switch dashboard <-> bracket, aligned to 20s wall-clock boundaries.
   useEffect(() => {
@@ -36,6 +99,10 @@ export default function BeamerView({ state, matches, participantsById }) {
 
   if (champion) {
     return <WinnerScreen champion={champion} />;
+  }
+
+  if (celebration) {
+    return <MatchCelebration {...celebration} />;
   }
 
   if (state.slushieBreak) {
@@ -59,11 +126,15 @@ export default function BeamerView({ state, matches, participantsById }) {
 
   return (
     <div className="beamer-wrap">
-      <div className="beamer-fade" key={view}>
+      <div className="beamer-fade" key={`${view}-${highlightId ?? ''}`}>
         {view === 'dashboard' ? (
           <MatchDashboard matches={matches} participantsById={participantsById} />
         ) : (
-          <BracketView matches={matches} participantsById={participantsById} />
+          <BracketView
+            matches={matches}
+            participantsById={participantsById}
+            highlightId={highlightId}
+          />
         )}
       </div>
       <div className="view-dots" aria-hidden="true">

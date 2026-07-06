@@ -20,7 +20,7 @@ function BracketPlayer({ player, score, isWinner, isBye, placeholder }) {
   );
 }
 
-function BracketMatch({ match, participantsById, isCurrent }) {
+function BracketMatch({ match, participantsById, isCurrent, isJustWon }) {
   const a = participantsById[match.playerA];
   const b = participantsById[match.playerB];
   const done = Boolean(match.winner) && !match.bye;
@@ -30,11 +30,12 @@ function BracketMatch({ match, participantsById, isCurrent }) {
   if (isBye) statusClass = 'is-bye-match';
   else if (done) statusClass = 'is-done';
   else if (isCurrent) statusClass = 'is-current';
+  if (isJustWon) statusClass += ' is-just-won';
 
   return (
     <div className={`bracket-match ${statusClass}`}>
       <div className="bracket-match-status">
-        {isBye ? 'Freilos' : done ? '✓' : isCurrent ? 'LIVE' : 'offen'}
+        {isJustWon ? '🎉 Sieg' : isBye ? 'Freilos' : done ? '✓' : isCurrent ? 'LIVE' : 'offen'}
       </div>
       <BracketPlayer
         player={a}
@@ -54,7 +55,7 @@ function BracketMatch({ match, participantsById, isCurrent }) {
   );
 }
 
-export default function BracketView({ matches, participantsById }) {
+export default function BracketView({ matches, participantsById, highlightId = null }) {
   const rounds = matchesByRound(matches);
   const current = getCurrentMatch(matches);
 
@@ -76,6 +77,7 @@ export default function BracketView({ matches, participantsById }) {
                   match={m}
                   participantsById={participantsById}
                   isCurrent={current?.id === m.id}
+                  isJustWon={highlightId === m.id}
                 />
               ))}
             </div>
