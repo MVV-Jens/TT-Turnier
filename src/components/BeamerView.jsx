@@ -4,6 +4,7 @@ import BracketView from './BracketView.jsx';
 import StandingsView from './StandingsView.jsx';
 import GroupsView from './GroupsView.jsx';
 import SlushieBreak from './SlushieBreak.jsx';
+import MotivationBreak from './MotivationBreak.jsx';
 import WinnerScreen from './WinnerScreen.jsx';
 import MatchCelebration from './MatchCelebration.jsx';
 import { MODES } from '../logic/formats.js';
@@ -153,6 +154,7 @@ export default function BeamerView({ state, live, participantsById }) {
     Boolean(state.tournament) &&
     !champion &&
     !state.slushieBreak &&
+    !state.motivationBreak &&
     !celebration &&
     !highlightId;
 
@@ -181,6 +183,10 @@ export default function BeamerView({ state, live, participantsById }) {
 
   if (state.slushieBreak) {
     return <SlushieBreak />;
+  }
+
+  if (state.motivationBreak) {
+    return <MotivationBreak />;
   }
 
   if (!state.tournament) {

@@ -10,6 +10,7 @@ const initialState = {
   tournament: null, // { format, order, options }
   results: {}, // { matchId: { a, b } }
   slushieBreak: false,
+  motivationBreak: false,
 };
 
 function load() {
@@ -107,14 +108,17 @@ function reducer(state, action) {
       return { ...state, results: next };
     }
     case 'TOGGLE_SLUSHIE': {
-      return { ...state, slushieBreak: !state.slushieBreak };
+      return { ...state, slushieBreak: !state.slushieBreak, motivationBreak: false };
     }
     case 'SET_SLUSHIE': {
       return { ...state, slushieBreak: action.value };
     }
+    case 'TOGGLE_MOTIVATION': {
+      return { ...state, motivationBreak: !state.motivationBreak, slushieBreak: false };
+    }
     case 'RESET_BRACKET': {
       // Keep participants + config, clear the running tournament.
-      return { ...state, tournament: null, results: {}, slushieBreak: false };
+      return { ...state, tournament: null, results: {}, slushieBreak: false, motivationBreak: false };
     }
     case 'RESET_ALL': {
       return { ...initialState };

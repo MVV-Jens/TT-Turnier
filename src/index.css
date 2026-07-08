@@ -1248,6 +1248,57 @@ select {
   font-weight: 700;
 }
 
+/* ============================ Motivation break ============================ */
+.motivation-screen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1000px 700px at 50% 18%, #3a2a08 0%, transparent 60%),
+    radial-gradient(800px 600px at 82% 85%, #0e2f4d 0%, transparent 60%),
+    var(--bg);
+}
+.motivation-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+  padding: 0 6vw;
+}
+.motivation-emoji {
+  font-family: var(--emoji);
+  font-size: clamp(3.5rem, 10vw, 8rem);
+  animation: bob 2.6s ease-in-out infinite;
+}
+.motivation-kicker {
+  font-size: clamp(1rem, 2vw, 1.8rem);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--yellow);
+  font-weight: 900;
+}
+.motivation-quote {
+  margin: 0;
+  font-size: clamp(2.2rem, 6vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  max-width: 18ch;
+  background: linear-gradient(90deg, #fff, var(--yellow), #fff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px #facc1522;
+  animation: quoteIn 0.55s cubic-bezier(0.18, 1.2, 0.4, 1);
+}
+@keyframes quoteIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
 /* ============================ Winner ============================ */
 .confetti-canvas {
   position: fixed;

@@ -120,6 +120,13 @@ export default function AdminPanel({ state, dispatch, live, participantsById }) 
             >
               🥤 Slushie-Break {state.slushieBreak ? 'beenden' : 'starten'}
             </button>
+            <button
+              type="button"
+              className={`btn ${state.motivationBreak ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => dispatch({ type: 'TOGGLE_MOTIVATION' })}
+            >
+              ⚡ Motivation {state.motivationBreak ? 'beenden' : 'starten'}
+            </button>
           </div>
 
           {champion && (
