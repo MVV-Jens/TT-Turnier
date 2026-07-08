@@ -61,7 +61,7 @@ export default function SlushieBreak() {
       <div className="slushie-content">
         <div className="slushie-emoji">🥤❄️🧊</div>
         <h1 className="slushie-title">Slushie Break</h1>
-        <p className="slushie-text">Finale startet gleich. Zeit für Nachschub.</p>
+        <p className="slushie-text">Gleich geht's weiter. Zeit für Nachschub.</p>
       </div>
     </div>
   );
