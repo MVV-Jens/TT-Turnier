@@ -22,12 +22,13 @@ export const MOTIVATION_QUOTES = [
   'Vorhand, Rückhand, Vollgas.',
   'Konzentration, Präzision, MVV-Vision.',
   'Jeder Aufschlag ist eine neue Chance.',
-  'Topspin ins Wochenende!',
+  'Topspin in die Arbeitswoche!',
   'Energie liefert MVV – die Bälle lieferst du.',
   'Zusammen sind wir unschlagbar.',
   'Heute Tischtennis-Legende, morgen Energie-Held.',
   'Netzroller zählen auch. Glück gehört zum Spiel.',
   'Schmettern, lächeln, gewinnen.',
+  'Klimapositiv wie MVV – jeder Ballwechsel ein Gewinn.',
 ];
 
 

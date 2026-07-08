@@ -37,6 +37,12 @@ function BouncingBalls() {
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
+      // Keep balls out of the actual text area (measured live + padded).
+      const content =
+        canvas.parentElement && canvas.parentElement.querySelector('.motivation-content');
+      const rect = content ? content.getBoundingClientRect() : null;
+      const pad = 30;
+
       balls.forEach((b) => {
         b.x += b.vx;
         b.y += b.vy;
@@ -44,6 +50,35 @@ function BouncingBalls() {
         if (b.y < b.r || b.y > height - b.r) b.vy *= -1;
         b.x = Math.max(b.r, Math.min(width - b.r, b.x));
         b.y = Math.max(b.r, Math.min(height - b.r, b.y));
+
+        // Bounce off the text zone (treated as a solid obstacle).
+        if (rect) {
+          const exL = rect.left - pad;
+          const exR = rect.right + pad;
+          const exT = rect.top - pad;
+          const exB = rect.bottom + pad;
+          if (b.x + b.r > exL && b.x - b.r < exR && b.y + b.r > exT && b.y - b.r < exB) {
+            const dl = b.x + b.r - exL;
+            const dr = exR - (b.x - b.r);
+            const dt = b.y + b.r - exT;
+            const db = exB - (b.y - b.r);
+            const min = Math.min(dl, dr, dt, db);
+            if (min === dl) {
+              b.x = exL - b.r;
+              b.vx = -Math.abs(b.vx);
+            } else if (min === dr) {
+              b.x = exR + b.r;
+              b.vx = Math.abs(b.vx);
+            } else if (min === dt) {
+              b.y = exT - b.r;
+              b.vy = -Math.abs(b.vy);
+            } else {
+              b.y = exB + b.r;
+              b.vy = Math.abs(b.vy);
+            }
+          }
+        }
+
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(250, 204, 21, 0.92)';
