@@ -46,9 +46,23 @@ export const MODES = {
     traits: ['schnell', 'wenige Spiele', 'ideal bei Zeitdruck'],
     fitFor: '12–32 Spieler, kurze Zeitfenster',
   },
+  // Special mode: not part of the time/games recommendation engine (kept out of
+  // MODE_ORDER). Phase 1 collects crowns for a fixed time, then a KO of the best.
+  kotb: {
+    key: 'kotb', name: 'Kronen sammeln', short: 'Kronen sammeln',
+    min: 5, max: 32,
+    traits: ['jeder spielt durchgehend', '2 Punkte in Folge = 1 Krone', 'K.o. der Kronen-Besten'],
+    fitFor: '30–45 Min Kronenjagd, danach K.o. ab Viertelfinale',
+    special: true,
+  },
 };
 
 export const MODE_ORDER = ['ko', 'round_robin', 'groups_final', 'groups_ko', 'swiss'];
+
+// Crown mode configuration (Phase 1 duration options in minutes).
+export const CROWN_DURATIONS = [30, 35, 40, 45];
+export const CROWN_DEFAULT_DURATION = 35;
+export const CROWN_MIN_PLAYERS = 5;
 
 // ---- Structural planning helpers (shared with the engine) ----
 

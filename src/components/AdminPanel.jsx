@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ParticipantManager from './ParticipantManager.jsx';
 import Configurator from './Configurator.jsx';
 import ResultEntry from './ResultEntry.jsx';
+import CrownBoard from './CrownBoard.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
 import { MODES, SET_LENGTHS, calcMode, RATING_META } from '../logic/formats.js';
@@ -18,6 +19,7 @@ export default function AdminPanel({ state, dispatch, live, participantsById }) 
     if (!confirm) return;
     if (confirm.type === 'resetBracket') dispatch({ type: 'RESET_BRACKET' });
     if (confirm.type === 'resetAll') dispatch({ type: 'RESET_ALL' });
+    if (confirm.type === 'reopenCrowns') dispatch({ type: 'KOTB_REOPEN_CROWNS' });
     setConfirm(null);
   };
 
@@ -32,6 +34,12 @@ export default function AdminPanel({ state, dispatch, live, participantsById }) 
       title: 'Komplett zurücksetzen?',
       message: 'Teilnehmer, Avatare, Konfiguration und Ergebnisse werden vollständig gelöscht.',
       confirmLabel: 'Alles löschen',
+      danger: true,
+    },
+    reopenCrowns: {
+      title: 'Zurück zur Kronenphase?',
+      message: 'Das K.o. wird verworfen und ihr sammelt weiter Kronen. Bereits eingetragene K.o.-Ergebnisse gehen verloren.',
+      confirmLabel: 'Zurück zur Kronenphase',
       danger: true,
     },
   };
@@ -56,6 +64,103 @@ export default function AdminPanel({ state, dispatch, live, participantsById }) 
   }
 
   const P = state.participants.length;
+
+  if (live.format === 'kotb') {
+    const isCrowns = live.phase === 'crowns';
+    const leader = live.crownStandings?.[0];
+    const leaderP = participantsById[leader?.id];
+
+    return (
+      <div className="admin">
+        <div className="admin-col">
+          <section className="panel">
+            <div className="panel-head">
+              <h2 className="panel-title">Turnier läuft</h2>
+              <span className="phase-pill">{MODES.kotb.short}</span>
+            </div>
+
+            <div className="setup-recap">
+              <div className="recap-cell"><span>Teilnehmer</span><strong>{P}</strong></div>
+              <div className="recap-cell"><span>Phase</span><strong>{isCrowns ? 'Kronenphase' : 'K.o.-Phase'}</strong></div>
+              <div className="recap-cell"><span>Kronen vergeben</span><strong>{live.crownCount}</strong></div>
+              <div className="recap-cell"><span>Ins K.o.</span><strong>Top {live.advance}</strong></div>
+              <div className="recap-cell"><span>Timer</span><strong>{live.useTimer ? `${live.durationMin} Min` : 'frei'}</strong></div>
+              <div className="recap-cell">
+                <span>Führung</span>
+                <strong>{leader && leader.crowns > 0 ? `${leaderP?.name} · ${leader.crowns}👑` : '—'}</strong>
+              </div>
+            </div>
+
+            {champion && (
+              <p className="champion-note">
+                🏆 <strong>{champion.name}</strong> ist Champion – der Gewinner-Screen läuft
+                automatisch im Beamer-Modus.
+              </p>
+            )}
+
+            <div className="control-row">
+              <button
+                type="button"
+                className={`btn ${state.slushieBreak ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => dispatch({ type: 'TOGGLE_SLUSHIE' })}
+              >
+                🥤 Slushie-Break {state.slushieBreak ? 'beenden' : 'starten'}
+              </button>
+              <button
+                type="button"
+                className={`btn ${state.motivationBreak ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => dispatch({ type: 'TOGGLE_MOTIVATION' })}
+              >
+                ⚡ Motivation {state.motivationBreak ? 'beenden' : 'starten'}
+              </button>
+            </div>
+
+            <div className="control-row danger-row">
+              {!isCrowns && !champion && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setConfirm({ type: 'reopenCrowns' })}
+                >
+                  ↩ Zurück zur Kronenphase
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setConfirm({ type: 'resetBracket' })}
+              >
+                Zurück zum Konfigurator
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger-ghost"
+                onClick={() => setConfirm({ type: 'resetAll' })}
+              >
+                Alles löschen
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div className="admin-col">
+          {isCrowns ? (
+            <CrownBoard state={state} dispatch={dispatch} live={live} participantsById={participantsById} />
+          ) : (
+            <ResultEntry state={state} dispatch={dispatch} live={live} participantsById={participantsById} />
+          )}
+        </div>
+
+        <ConfirmDialog
+          open={Boolean(confirm)}
+          {...(confirm ? confirmConfig[confirm.type] : {})}
+          onConfirm={runConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      </div>
+    );
+  }
+
   const { tables, minutes, setLength } = state.config;
   const calc = calcMode(live.format, P, tables, minutes, setLength);
   const nameOf = (id, fallback = 'Sieger') => participantsById[id]?.name ?? fallback;

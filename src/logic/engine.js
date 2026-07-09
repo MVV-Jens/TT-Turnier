@@ -29,7 +29,7 @@ export function shuffle(input) {
 }
 
 // Builds the persistent tournament descriptor from a chosen format + field.
-export function buildTournament(format, participantIds, setLengthKey) {
+export function buildTournament(format, participantIds, setLengthKey, extra = {}) {
   const order = shuffle(participantIds);
   const P = order.length;
   const sl = SET_LENGTHS[setLengthKey] || SET_LENGTHS.short;
@@ -46,6 +46,10 @@ export function buildTournament(format, participantIds, setLengthKey) {
     options.advance = plan.advance;
   }
   if (format === 'swiss') options.rounds = swissRounds(P);
+  if (format === 'kotb') {
+    options.durationMin = extra.durationMin ?? null;
+    options.useTimer = Boolean(extra.useTimer);
+  }
   return { format, order, options };
 }
 
@@ -156,7 +160,7 @@ function koSlots(order, size) {
   return slots;
 }
 
-function buildKO(slots, results, opts, prefix = 'ko') {
+export function buildKO(slots, results, opts, prefix = 'ko') {
   const size = slots.length;
   const totalRounds = Math.log2(size);
   const matches = [];

@@ -7,6 +7,7 @@ import SlushieBreak from './SlushieBreak.jsx';
 import MotivationBreak from './MotivationBreak.jsx';
 import WinnerScreen from './WinnerScreen.jsx';
 import MatchCelebration from './MatchCelebration.jsx';
+import CrownBeamer from './CrownBeamer.jsx';
 import { MODES } from '../logic/formats.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
@@ -34,6 +35,15 @@ function Overview({ live, participantsById, highlightId, currentId, title }) {
           participantsById={participantsById}
           highlightId={highlightId}
           subtitle={`${title} · K.o.`}
+        />
+      );
+    case 'kotb':
+      return (
+        <BracketView
+          matches={matches}
+          participantsById={participantsById}
+          highlightId={highlightId}
+          subtitle="K.o. der Kronen-Besten"
         />
       );
     case 'round_robin':
@@ -187,6 +197,10 @@ export default function BeamerView({ state, live, participantsById }) {
 
   if (state.motivationBreak) {
     return <MotivationBreak />;
+  }
+
+  if (live.format === 'kotb' && live.phase !== 'ko') {
+    return <CrownBeamer live={live} participantsById={participantsById} title={title} />;
   }
 
   if (!state.tournament) {

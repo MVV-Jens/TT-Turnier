@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer } from 'react';
 import { makeId, buildTournament, computeTournament } from '../logic/engine.js';
+import { computeCrownsTournament } from '../logic/crowns.js';
 import { randomAvatar, nextRandomAvatar, randomColor } from '../data/avatars.js';
 
 const STORAGE_KEY = 'vr-tt-cup-2026';
@@ -9,6 +10,7 @@ const initialState = {
   config: { tables: 1, minutes: 90, setLength: 'short', title: 'VR Tischtennis Cup' },
   tournament: null, // { format, order, options }
   results: {}, // { matchId: { a, b } }
+  kotb: null, // { crowns:[playerId], startedAt, endedAt, phase:'crowns'|'ko', koOrder }
   slushieBreak: false,
   motivationBreak: false,
 };
@@ -86,12 +88,25 @@ function reducer(state, action) {
     }
     case 'START_TOURNAMENT': {
       if (state.participants.length < 4) return state;
+      const ids = state.participants.map((p) => p.id);
       const tournament = buildTournament(
         action.format,
-        state.participants.map((p) => p.id),
+        ids,
         state.config.setLength,
+        action.kotbOptions || {},
       );
-      return { ...state, tournament, results: {}, slushieBreak: false };
+      const kotb =
+        action.format === 'kotb'
+          ? { crowns: [], startedAt: Date.now(), endedAt: null, phase: 'crowns', koOrder: null }
+          : null;
+      return {
+        ...state,
+        tournament,
+        results: {},
+        kotb,
+        slushieBreak: false,
+        motivationBreak: false,
+      };
     }
     case 'SET_RESULT': {
       return {
@@ -107,6 +122,44 @@ function reducer(state, action) {
       delete next[action.matchId];
       return { ...state, results: next };
     }
+    case 'KOTB_AWARD': {
+      if (!state.kotb || state.kotb.phase !== 'crowns') return state;
+      return {
+        ...state,
+        kotb: { ...state.kotb, crowns: [...state.kotb.crowns, action.playerId] },
+      };
+    }
+    case 'KOTB_UNDO': {
+      if (!state.kotb || state.kotb.crowns.length === 0) return state;
+      return {
+        ...state,
+        kotb: { ...state.kotb, crowns: state.kotb.crowns.slice(0, -1) },
+      };
+    }
+    case 'KOTB_REMOVE': {
+      if (!state.kotb || state.kotb.phase !== 'crowns') return state;
+      const idx = state.kotb.crowns.lastIndexOf(action.playerId);
+      if (idx === -1) return state;
+      const crowns = state.kotb.crowns.slice();
+      crowns.splice(idx, 1);
+      return { ...state, kotb: { ...state.kotb, crowns } };
+    }
+    case 'KOTB_START_KO': {
+      if (!state.kotb || !action.koOrder || action.koOrder.length < 2) return state;
+      return {
+        ...state,
+        results: {},
+        kotb: { ...state.kotb, phase: 'ko', koOrder: action.koOrder, endedAt: Date.now() },
+      };
+    }
+    case 'KOTB_REOPEN_CROWNS': {
+      if (!state.kotb) return state;
+      return {
+        ...state,
+        results: {},
+        kotb: { ...state.kotb, phase: 'crowns', koOrder: null, endedAt: null },
+      };
+    }
     case 'TOGGLE_SLUSHIE': {
       return { ...state, slushieBreak: !state.slushieBreak, motivationBreak: false };
     }
@@ -118,7 +171,7 @@ function reducer(state, action) {
     }
     case 'RESET_BRACKET': {
       // Keep participants + config, clear the running tournament.
-      return { ...state, tournament: null, results: {}, slushieBreak: false, motivationBreak: false };
+      return { ...state, tournament: null, results: {}, kotb: null, slushieBreak: false, motivationBreak: false };
     }
     case 'RESET_ALL': {
       return { ...initialState };
@@ -175,8 +228,11 @@ export function useTournament() {
   );
 
   const live = useMemo(
-    () => computeTournament(state.tournament, state.results),
-    [state.tournament, state.results],
+    () =>
+      state.tournament?.format === 'kotb'
+        ? computeCrownsTournament(state.tournament, state.kotb, state.results)
+        : computeTournament(state.tournament, state.results),
+    [state.tournament, state.kotb, state.results],
   );
 
   return { state, dispatch, live, participantsById };

@@ -9,7 +9,11 @@ import {
   TIME_PRESETS,
   MIN_PLAYERS,
   MAX_PLAYERS,
+  CROWN_DURATIONS,
+  CROWN_DEFAULT_DURATION,
+  CROWN_MIN_PLAYERS,
 } from '../logic/formats.js';
+import { adaptiveAdvance } from '../logic/crowns.js';
 
 function Segmented({ options, value, onChange }) {
   return (
@@ -35,6 +39,9 @@ function RatingBadge({ rating }) {
 
 export default function Configurator({ state, dispatch, onStart }) {
   const [selected, setSelected] = useState(null);
+  const [crownOn, setCrownOn] = useState(false);
+  const [crownUseTimer, setCrownUseTimer] = useState(true);
+  const [crownDuration, setCrownDuration] = useState(CROWN_DEFAULT_DURATION);
   const P = state.participants.length;
   const { tables, minutes, setLength } = state.config;
   const [customMinutes, setCustomMinutes] = useState(String(minutes));
@@ -55,6 +62,11 @@ export default function Configurator({ state, dispatch, onStart }) {
   const tooMany = P > MAX_PLAYERS;
   const canStart = !tooFew && !tooMany && chosenCalc && chosenCalc.eligible;
   const isOverride = selected && rec && selected !== rec.recommended;
+
+  const crownEligible = P >= CROWN_MIN_PLAYERS && P <= MAX_PLAYERS;
+  const crownAdvance = adaptiveAdvance(P);
+  const crownAdvanceLabel =
+    crownAdvance === 8 ? 'ab Viertelfinale' : crownAdvance === 4 ? 'ab Halbfinale' : 'direkt im Finale';
 
   return (
     <section className="panel configurator">
@@ -254,6 +266,78 @@ export default function Configurator({ state, dispatch, onStart }) {
           </div>
         </>
       )}
+
+      <div className="special-mode">
+        <span className="field-label">Spezialmodus</span>
+        <button
+          type="button"
+          className={`mode-card special-card ${crownOn ? 'is-selected' : ''} ${!crownEligible ? 'is-disabled' : ''}`}
+          disabled={!crownEligible}
+          onClick={() => setCrownOn((v) => !v)}
+        >
+          <div className="mode-card-main">
+            <span className="mode-card-name">
+              👑 {MODES.kotb.name}
+              <span className="mode-tag">Spezial</span>
+            </span>
+            <span className="mode-card-fit">
+              {crownEligible ? MODES.kotb.fitFor : `ab ${CROWN_MIN_PLAYERS} Spielern`}
+            </span>
+          </div>
+          <div className="mode-card-side">
+            <span className="mode-card-dur">{crownOn ? '▲ eingeklappt' : '▼ auswählen'}</span>
+          </div>
+        </button>
+
+        {crownOn && crownEligible && (
+          <div className="special-options">
+            <p className="hint">
+              Alle stellen sich in eine Reihe. Wer <strong>2 Punkte in Folge</strong> macht,
+              bekommt eine 👑 und reiht sich neu ein. Danach ziehen die
+              besten <strong>{crownAdvance}</strong> ({crownAdvanceLabel}) ins K.o.
+            </p>
+
+            <div className="config-field config-field-wide">
+              <span className="field-label">Zeitfenster</span>
+              <Segmented
+                value={crownUseTimer ? crownDuration : 'off'}
+                onChange={(v) => {
+                  if (v === 'off') {
+                    setCrownUseTimer(false);
+                  } else {
+                    setCrownUseTimer(true);
+                    setCrownDuration(v);
+                  }
+                }}
+                options={[
+                  ...CROWN_DURATIONS.map((m) => ({ value: m, label: `${m} Min` })),
+                  { value: 'off', label: 'Ohne Timer' },
+                ]}
+              />
+            </div>
+
+            <div className="config-actions">
+              <button
+                type="button"
+                className="btn btn-accent btn-lg"
+                onClick={() => {
+                  dispatch({
+                    type: 'START_TOURNAMENT',
+                    format: 'kotb',
+                    kotbOptions: {
+                      durationMin: crownUseTimer ? crownDuration : null,
+                      useTimer: crownUseTimer,
+                    },
+                  });
+                  onStart?.();
+                }}
+              >
+                👑 Kronen sammeln starten
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
