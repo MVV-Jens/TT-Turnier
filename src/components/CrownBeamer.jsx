@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import Avatar from './Avatar.jsx';
 import { formatClock } from '../logic/crowns.js';
+import { CROWN_QUOTES } from '../data/crownQuotes.js';
+
+const QUOTE_CYCLE_MS = 30000; // a new quote appears every 30 seconds
+const QUOTE_SHOW_MS = 10000; // ...and stays visible for 10 seconds
 
 function useTicker(active) {
   const [now, setNow] = useState(() => Date.now());
@@ -32,6 +36,14 @@ export default function CrownBeamer({ live, participantsById, title = 'VR Tischt
   const overtime = remainingMs != null && remainingMs <= 0;
   const showCutoff = advance < standings.length;
 
+  // Motivational quote ticker: every 30s a new quote shows for 10s, derived from
+  // the wall clock so all beamer windows stay in sync. Edit src/data/crownQuotes.js.
+  const hasQuotes = CROWN_QUOTES.length > 0;
+  const quoteVisible = hasQuotes && now % QUOTE_CYCLE_MS < QUOTE_SHOW_MS;
+  const quote = hasQuotes
+    ? CROWN_QUOTES[Math.floor(now / QUOTE_CYCLE_MS) % CROWN_QUOTES.length]
+    : '';
+
   return (
     <div className="beamer-screen crown-beamer">
       <div className="crown-side crown-clock-side">
@@ -59,6 +71,9 @@ export default function CrownBeamer({ live, participantsById, title = 'VR Tischt
               <span className="crown-clock-label">gespielt</span>
             </>
           )}
+          <div className={`crown-quote ${quoteVisible ? 'is-visible' : ''}`} aria-live="polite">
+            „{quote}“
+          </div>
         </div>
 
         <div className="crown-clock-foot">

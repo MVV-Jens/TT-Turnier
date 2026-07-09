@@ -1947,6 +1947,29 @@ select {
   color: var(--text-dim);
   font-weight: 700;
 }
+.crown-quote {
+  margin-top: 2.4vh;
+  max-width: 92%;
+  min-height: 3.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: clamp(1.05rem, 2vw, 2.1rem);
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.25;
+  color: var(--yellow);
+  text-shadow: 0 0 24px #facc1533;
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
+}
+.crown-quote.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
 .crown-clock-foot {
   flex-shrink: 0;
   text-align: center;
