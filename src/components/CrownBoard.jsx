@@ -35,6 +35,11 @@ export default function CrownBoard({ state, dispatch, live, participantsById }) 
   const elapsedMs = startedAt ? now - startedAt : 0;
   const overtime = remainingMs != null && remainingMs <= 0;
 
+  const handicaps = useMemo(() => new Set(live.handicaps || []), [live.handicaps]);
+  const threshold = live.handicapThreshold || 0;
+  const setThreshold = (value) =>
+    dispatch({ type: 'KOTB_SET_HANDICAP_THRESHOLD', value: Math.max(0, value) });
+
   const startKo = () => {
     const plan = planCrownKo(live.crownStandings, advance);
     if (plan.needsDecision) {
@@ -73,30 +78,73 @@ export default function CrownBoard({ state, dispatch, live, participantsById }) 
         )}
       </p>
 
+      <div className="crown-handicap-bar">
+        <span className="crown-handicap-label">⚖️ Handicap ab</span>
+        <button
+          type="button"
+          className="crown-step"
+          aria-label="Schwelle verringern"
+          disabled={threshold <= 0}
+          onClick={() => setThreshold(threshold - 1)}
+        >
+          −
+        </button>
+        <span className="crown-handicap-value">{threshold > 0 ? `${threshold} 👑` : 'aus'}</span>
+        <button
+          type="button"
+          className="crown-step"
+          aria-label="Schwelle erhöhen"
+          onClick={() => setThreshold(threshold + 1)}
+        >
+          +
+        </button>
+        <span className="crown-handicap-hint">
+          {handicaps.size > 0
+            ? `${handicaps.size} markiert · ⚖️ pro Spieler manuell schaltbar`
+            : 'ab X Kronen automatisch · ⚖️ pro Spieler manuell schaltbar'}
+        </span>
+      </div>
+
       <div className="crown-award-grid">
-        {state.participants.map((p) => (
-          <div className="crown-award-row" key={p.id} style={{ '--accent': p.color }}>
-            <Avatar avatar={p.avatar} color={p.color} size={44} />
-            <span className="crown-award-name">{p.name}</span>
-            <span className="crown-award-count">👑 {tally[p.id] || 0}</span>
-            <button
-              type="button"
-              className="crown-minus"
-              aria-label={`Krone von ${p.name} entfernen`}
-              disabled={!tally[p.id]}
-              onClick={() => dispatch({ type: 'KOTB_REMOVE', playerId: p.id })}
+        {state.participants.map((p) => {
+          const isHandi = handicaps.has(p.id);
+          return (
+            <div
+              className={`crown-award-row ${isHandi ? 'is-handicapped' : ''}`}
+              key={p.id}
+              style={{ '--accent': p.color }}
             >
-              −
-            </button>
-            <button
-              type="button"
-              className="crown-plus"
-              onClick={() => dispatch({ type: 'KOTB_AWARD', playerId: p.id })}
-            >
-              +1 👑
-            </button>
-          </div>
-        ))}
+              <Avatar avatar={p.avatar} color={p.color} size={44} />
+              <span className="crown-award-name">{p.name}</span>
+              <span className="crown-award-count">👑 {tally[p.id] || 0}</span>
+              <button
+                type="button"
+                className={`crown-handicap-toggle ${isHandi ? 'is-on' : ''}`}
+                aria-pressed={isHandi}
+                title={isHandi ? `Handicap von ${p.name} entfernen` : `Handicap für ${p.name} setzen`}
+                onClick={() => dispatch({ type: 'KOTB_TOGGLE_HANDICAP', playerId: p.id })}
+              >
+                ⚖️
+              </button>
+              <button
+                type="button"
+                className="crown-minus"
+                aria-label={`Krone von ${p.name} entfernen`}
+                disabled={!tally[p.id]}
+                onClick={() => dispatch({ type: 'KOTB_REMOVE', playerId: p.id })}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="crown-plus"
+                onClick={() => dispatch({ type: 'KOTB_AWARD', playerId: p.id })}
+              >
+                +1 👑
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <div className="control-row">

@@ -42,6 +42,7 @@ export default function Configurator({ state, dispatch, onStart }) {
   const [crownOn, setCrownOn] = useState(false);
   const [crownUseTimer, setCrownUseTimer] = useState(true);
   const [crownDuration, setCrownDuration] = useState(CROWN_DEFAULT_DURATION);
+  const [crownHandicap, setCrownHandicap] = useState(0);
   const P = state.participants.length;
   const { tables, minutes, setLength } = state.config;
   const [customMinutes, setCustomMinutes] = useState(String(minutes));
@@ -316,6 +317,22 @@ export default function Configurator({ state, dispatch, onStart }) {
               />
             </div>
 
+            <div className="config-field config-field-wide">
+              <span className="field-label">Handicap ab Kronen (0 = aus)</span>
+              <input
+                className="custom-minutes"
+                type="number"
+                min="0"
+                max="20"
+                value={crownHandicap}
+                onChange={(e) => setCrownHandicap(Math.max(0, Math.floor(Number(e.target.value)) || 0))}
+              />
+              <span className="hint">
+                Spieler, die diese Kronenzahl erreichen, werden automatisch mit ⚖️ markiert
+                (bleibt bis zum Ende). Auch später jederzeit änderbar und pro Spieler manuell schaltbar.
+              </span>
+            </div>
+
             <div className="config-actions">
               <button
                 type="button"
@@ -327,6 +344,7 @@ export default function Configurator({ state, dispatch, onStart }) {
                     kotbOptions: {
                       durationMin: crownUseTimer ? crownDuration : null,
                       useTimer: crownUseTimer,
+                      handicapThreshold: crownHandicap,
                     },
                   });
                   onStart?.();

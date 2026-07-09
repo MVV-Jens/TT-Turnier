@@ -30,6 +30,7 @@ export default function CrownBeamer({ live, participantsById, title = 'VR Tischt
 
   const { startedAt, durationMin, useTimer, advance } = live;
   const standings = live.crownStandings || [];
+  const handicaps = new Set(live.handicaps || []);
 
   // Pulse the row that just earned a crown (re-triggers on every award via count).
   useEffect(() => {
@@ -116,15 +117,19 @@ export default function CrownBeamer({ live, participantsById, title = 'VR Tischt
           {standings.map((row, i) => {
             const p = participantsById[row.id];
             const qualified = i < advance;
+            const handicapped = handicaps.has(row.id);
             return (
               <div
                 key={row.id}
-                className={`crown-rank-row ${qualified ? 'is-qualified' : ''} ${i === 0 && row.crowns > 0 ? 'is-leader' : ''} ${bumpId === row.id ? 'is-bumped' : ''}`}
+                className={`crown-rank-row ${qualified ? 'is-qualified' : ''} ${i === 0 && row.crowns > 0 ? 'is-leader' : ''} ${bumpId === row.id ? 'is-bumped' : ''} ${handicapped ? 'is-handicapped' : ''}`}
                 style={{ '--i': i, '--accent': p?.color }}
               >
                 <span className="crown-rank-num">{i + 1}</span>
                 <Avatar avatar={p?.avatar} color={p?.color} size="clamp(26px, 4vh, 46px)" />
                 <span className="crown-rank-name">{p?.name ?? '—'}</span>
+                {handicapped && (
+                  <span className="crown-rank-handicap" title="Handicap">⚖️</span>
+                )}
                 <span className="crown-rank-crowns">
                   <span className="crown-rank-emoji">👑</span>
                   {row.crowns}

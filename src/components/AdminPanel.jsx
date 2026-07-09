@@ -89,6 +89,13 @@ export default function AdminPanel({ state, dispatch, live, participantsById }) 
                 <span>Führung</span>
                 <strong>{leader && leader.crowns > 0 ? `${leaderP?.name} · ${leader.crowns}👑` : '—'}</strong>
               </div>
+              <div className="recap-cell">
+                <span>Handicaps ⚖️</span>
+                <strong>
+                  {live.handicaps?.length || 0}
+                  {live.handicapThreshold ? ` · ab ${live.handicapThreshold}👑` : ''}
+                </strong>
+              </div>
             </div>
 
             {champion && (

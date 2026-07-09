@@ -121,6 +121,8 @@ export function computeCrownsTournament(tournament, kotb, results = {}) {
     endedAt: kotb?.endedAt ?? null,
     durationMin: options?.durationMin ?? null,
     useTimer: Boolean(options?.useTimer),
+    handicaps: kotb?.handicaps || [],
+    handicapThreshold: kotb?.handicapThreshold ?? 0,
     champion: null,
     phaseLabel: 'Kronen sammeln',
     progress: { played: 0, total: 0, percent: 0 },

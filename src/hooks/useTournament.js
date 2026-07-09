@@ -97,7 +97,15 @@ function reducer(state, action) {
       );
       const kotb =
         action.format === 'kotb'
-          ? { crowns: [], startedAt: Date.now(), endedAt: null, phase: 'crowns', koOrder: null }
+          ? {
+              crowns: [],
+              startedAt: Date.now(),
+              endedAt: null,
+              phase: 'crowns',
+              koOrder: null,
+              handicaps: [],
+              handicapThreshold: Math.max(0, Math.floor(action.kotbOptions?.handicapThreshold) || 0),
+            }
           : null;
       return {
         ...state,
@@ -124,10 +132,16 @@ function reducer(state, action) {
     }
     case 'KOTB_AWARD': {
       if (!state.kotb || state.kotb.phase !== 'crowns') return state;
-      return {
-        ...state,
-        kotb: { ...state.kotb, crowns: [...state.kotb.crowns, action.playerId] },
-      };
+      const crowns = [...state.kotb.crowns, action.playerId];
+      let handicaps = state.kotb.handicaps || [];
+      const threshold = state.kotb.handicapThreshold || 0;
+      // Auto-mark a handicap once a player reaches the crown threshold. Sticky:
+      // it is never auto-removed (stays even if crowns drop via undo).
+      if (threshold > 0 && !handicaps.includes(action.playerId)) {
+        const count = crowns.reduce((n, id) => (id === action.playerId ? n + 1 : n), 0);
+        if (count >= threshold) handicaps = [...handicaps, action.playerId];
+      }
+      return { ...state, kotb: { ...state.kotb, crowns, handicaps } };
     }
     case 'KOTB_UNDO': {
       if (!state.kotb || state.kotb.crowns.length === 0) return state;
@@ -143,6 +157,31 @@ function reducer(state, action) {
       const crowns = state.kotb.crowns.slice();
       crowns.splice(idx, 1);
       return { ...state, kotb: { ...state.kotb, crowns } };
+    }
+    case 'KOTB_TOGGLE_HANDICAP': {
+      if (!state.kotb) return state;
+      const current = state.kotb.handicaps || [];
+      const handicaps = current.includes(action.playerId)
+        ? current.filter((id) => id !== action.playerId)
+        : [...current, action.playerId];
+      return { ...state, kotb: { ...state.kotb, handicaps } };
+    }
+    case 'KOTB_SET_HANDICAP_THRESHOLD': {
+      if (!state.kotb) return state;
+      const value = Math.max(0, Math.floor(action.value) || 0);
+      let handicaps = state.kotb.handicaps || [];
+      if (value > 0) {
+        // Retroactively mark everyone already at/above the new threshold.
+        const counts = {};
+        state.kotb.crowns.forEach((id) => {
+          counts[id] = (counts[id] || 0) + 1;
+        });
+        const toAdd = Object.keys(counts).filter(
+          (id) => counts[id] >= value && !handicaps.includes(id),
+        );
+        if (toAdd.length) handicaps = [...handicaps, ...toAdd];
+      }
+      return { ...state, kotb: { ...state.kotb, handicapThreshold: value, handicaps } };
     }
     case 'KOTB_START_KO': {
       if (!state.kotb || !action.koOrder || action.koOrder.length < 2) return state;
