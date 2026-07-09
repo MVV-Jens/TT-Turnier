@@ -9,6 +9,12 @@
 //    - Neue Zeile hinzufügen, am Ende ein Komma nicht vergessen.
 //    - Reihenfolge egal – die Zitate werden der Reihe nach durchgewechselt.
 //    - Datei speichern, Seite neu laden – fertig.
+//
+//  Spielernamen einbauen (optional): Diese Platzhalter werden automatisch durch
+//  aktuelle Namen ersetzt:
+//    {spieler}  -> ein wechselnder Spieler aus dem Teilnehmerfeld
+//    {führung}  -> der aktuell Führende im Kronen-Ranking
+//  Beispiel: '{spieler}, jetzt ist deine Chance auf die Krone!'
 // ============================================================================
 
 export const CROWN_QUOTES = [
@@ -39,4 +45,9 @@ export const CROWN_QUOTES = [
   'Netzroller zählen auch. Glück gehört zum Spiel.',
   'Schmettern, lächeln, gewinnen.',
   'Klimapositiv wie MVV – jeder Ballwechsel ein Gewinn.',
+  '{spieler}, jetzt ist deine Chance auf die Krone!',
+  'Los {spieler} – zeig, was du drauf hast!',
+  '{spieler}, zwei Punkte in Folge und die Krone ist dir sicher.',
+  '{führung} führt – aber {spieler} bleibt dran!',
+  'Alle Augen auf {spieler}!',
 ];

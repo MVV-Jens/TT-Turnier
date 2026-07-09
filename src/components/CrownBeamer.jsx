@@ -6,6 +6,14 @@ import { CROWN_QUOTES } from '../data/crownQuotes.js';
 const QUOTE_CYCLE_MS = 30000; // a new quote appears every 30 seconds
 const QUOTE_SHOW_MS = 10000; // ...and stays visible for 10 seconds
 
+// Replace name placeholders in a quote with current player names.
+//   {spieler} -> a rotating player, {führung}/{fuehrung} -> current leader.
+function fillQuoteNames(text, playerName, leaderName) {
+  return text
+    .replace(/\{spieler\}/gi, playerName || 'ihr')
+    .replace(/\{(führung|fuehrung|leader)\}/gi, leaderName || 'die Spitze');
+}
+
 function useTicker(active) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -39,9 +47,18 @@ export default function CrownBeamer({ live, participantsById, title = 'VR Tischt
   // Motivational quote ticker: every 30s a new quote shows for 10s, derived from
   // the wall clock so all beamer windows stay in sync. Edit src/data/crownQuotes.js.
   const hasQuotes = CROWN_QUOTES.length > 0;
+  const cycleIndex = Math.floor(now / QUOTE_CYCLE_MS);
   const quoteVisible = hasQuotes && now % QUOTE_CYCLE_MS < QUOTE_SHOW_MS;
+
+  // Names available for placeholders ({spieler}, {führung}). Chosen per cycle so
+  // they stay stable during the 10s display and identical across beamer windows.
+  const playerNames = standings.map((s) => participantsById[s.id]?.name).filter(Boolean);
+  const randomName = playerNames.length
+    ? playerNames[cycleIndex % playerNames.length]
+    : '';
+  const leaderName = playerNames[0] || '';
   const quote = hasQuotes
-    ? CROWN_QUOTES[Math.floor(now / QUOTE_CYCLE_MS) % CROWN_QUOTES.length]
+    ? fillQuoteNames(CROWN_QUOTES[cycleIndex % CROWN_QUOTES.length], randomName, leaderName)
     : '';
 
   return (
