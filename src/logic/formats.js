@@ -81,7 +81,10 @@ export function groupsFinalPlan() {
 }
 
 export function groupsKoPlan(players) {
-  const groups = players >= 12 ? 4 : 2;
+  // Scale the number of groups so groups stay small (~4 players each). This
+  // keeps the group round-robins short and – crucially – makes the total game
+  // count grow smoothly with the field instead of exploding for 9–11 players.
+  const groups = Math.max(2, Math.min(8, Math.ceil(players / 4)));
   return { groups, advance: 2 };
 }
 

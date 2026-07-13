@@ -160,6 +160,23 @@ function koSlots(order, size) {
   return slots;
 }
 
+// Standard single-elimination seeding order: returns, for a bracket of `size`,
+// the 1-indexed seed sitting in each slot (so seed 1 and seed 2 land on opposite
+// ends and byes for surplus seeds spread to the top seeds).
+function seedOrder(size) {
+  let seeds = [1, 2];
+  while (seeds.length < size) {
+    const sum = seeds.length * 2 + 1;
+    const next = [];
+    for (const s of seeds) {
+      next.push(s);
+      next.push(sum - s);
+    }
+    seeds = next;
+  }
+  return seeds;
+}
+
 export function buildKO(slots, results, opts, prefix = 'ko') {
   const size = slots.length;
   const totalRounds = Math.log2(size);
@@ -418,14 +435,14 @@ export function computeTournament(tournament, results = {}) {
       allResolved(built.matches.filter((m) => m.groupId === g.id)),
     );
     if (groupsDone) {
-      const G = groups.length;
       const winners = groups.map((g) => g.standings[0]?.id ?? null);
       const runners = groups.map((g) => g.standings[1]?.id ?? null);
-      const slots = [];
-      for (let k = 0; k < G; k += 1) {
-        slots.push(winners[k]);
-        slots.push(runners[(k + 1) % G]);
-      }
+      // Group winners are the top seeds, runners-up the lower seeds. The bracket
+      // is sized to the next power of two so any number of qualifiers works –
+      // surplus slots become byes for the highest-seeded winners.
+      const advancers = [...winners, ...runners];
+      const bracketSize = koBracketSize(advancers.length);
+      const slots = seedOrder(bracketSize).map((seed) => advancers[seed - 1] ?? null);
       const { matches: km, totalRounds } = buildKO(slots, results, opts, 'ko');
       matches = built.matches.concat(km);
       const final = km.find((m) => m.round === totalRounds - 1);
