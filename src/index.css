@@ -1356,9 +1356,6 @@ select {
   color: var(--ice);
   max-width: 20ch;
 }
-.winner-export {
-  margin-top: 2vh;
-}
 
 /* ============================ Configurator ============================ */
 .config-grid {

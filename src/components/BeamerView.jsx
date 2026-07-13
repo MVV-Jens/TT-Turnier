@@ -13,7 +13,7 @@ import MatchIntro from './MatchIntro.jsx';
 import PodiumScreen from './PodiumScreen.jsx';
 import { MODES } from '../logic/formats.js';
 import { getPodium } from '../logic/engine.js';
-import { playDing, playFanfare, playWhoosh } from '../logic/sound.js';
+import { playFanfare, playWhoosh } from '../logic/sound.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
 const CELEBRATE_MS = 5000; // confetti celebration screen
@@ -161,7 +161,6 @@ export default function BeamerView({ state, live, participantsById }) {
           : `${latest.scoreB}:${latest.scoreA}`;
       setHighlightId(null);
       setCelebration({ matchId: latest.id, winner, scoreText, roundName: latest.roundName });
-      if (soundOnRef.current) playDing();
     }
   }, [matches, participantsById, live.champion]);
 
