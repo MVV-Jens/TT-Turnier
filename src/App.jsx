@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTournament } from './hooks/useTournament.js';
 import AdminPanel from './components/AdminPanel.jsx';
 import BeamerView from './components/BeamerView.jsx';
+import BackupControls from './components/BackupControls.jsx';
+import { unlockAudio } from './logic/sound.js';
 
 export default function App() {
   const { state, dispatch, live, participantsById } = useTournament();
@@ -78,11 +80,31 @@ export default function App() {
             <span className="brand-text">{state.config.title || 'VR Tischtennis Cup'}</span>
           </div>
           <div className="topbar-actions">
+            <BackupControls state={state} dispatch={dispatch} />
+            <button
+              type="button"
+              className={`icon-btn ${state.config.soundOn ? 'sound-on' : ''}`}
+              title={state.config.soundOn ? 'Sound ausschalten' : 'Sound einschalten'}
+              onClick={() => {
+                if (!state.config.soundOn) unlockAudio();
+                dispatch({ type: 'SET_CONFIG', config: { soundOn: !state.config.soundOn } });
+              }}
+            >
+              {state.config.soundOn ? '🔊' : '🔇'}
+            </button>
             <div className="mode-switch">
               <button type="button" className="active" onClick={() => setMode('admin')}>
                 Admin
               </button>
-              <button type="button" onClick={() => setMode('beamer')}>Beamer</button>
+              <button
+                type="button"
+                onClick={() => {
+                  unlockAudio();
+                  setMode('beamer');
+                }}
+              >
+                Beamer
+              </button>
             </div>
             <button
               type="button"

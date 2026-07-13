@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useReducer } from 'react';
 import { makeId, buildTournament, computeTournament } from '../logic/engine.js';
 import { computeCrownsTournament } from '../logic/crowns.js';
-import { randomAvatar, nextRandomAvatar, randomColor } from '../data/avatars.js';
+import { leastUsedAvatar, leastUsedColor } from '../data/avatars.js';
 
 const STORAGE_KEY = 'vr-tt-cup-2026';
 
 const initialState = {
   participants: [], // { id, name, avatar, color }
-  config: { tables: 1, minutes: 90, setLength: 'short', title: 'VR Tischtennis Cup' },
+  config: { tables: 1, minutes: 90, setLength: 'short', title: 'VR Tischtennis Cup', soundOn: false },
   tournament: null, // { format, order, options }
   results: {}, // { matchId: { a, b } }
+  startedAt: null, // ms timestamp when the tournament was started
   kotb: null, // { crowns:[playerId], startedAt, endedAt, phase:'crowns'|'ko', koOrder }
   slushieBreak: false,
   motivationBreak: false,
@@ -26,12 +27,12 @@ function load() {
   }
 }
 
-function makeParticipant(name) {
+function makeParticipant(name, usedAvatars = [], usedColors = []) {
   return {
     id: makeId('p'),
     name: name.trim(),
-    avatar: randomAvatar(),
-    color: randomColor(),
+    avatar: leastUsedAvatar(usedAvatars),
+    color: leastUsedColor(usedColors),
   };
 }
 
@@ -41,7 +42,15 @@ function reducer(state, action) {
       const names = action.names
         .map((n) => n.trim())
         .filter((n) => n.length > 0);
-      const additions = names.map(makeParticipant);
+      const usedAvatars = state.participants.map((p) => p.avatar);
+      const usedColors = state.participants.map((p) => p.color);
+      const additions = [];
+      names.forEach((name) => {
+        const p = makeParticipant(name, usedAvatars, usedColors);
+        additions.push(p);
+        usedAvatars.push(p.avatar);
+        usedColors.push(p.color);
+      });
       return { ...state, participants: [...state.participants, ...additions] };
     }
     case 'RENAME_PARTICIPANT': {
@@ -59,10 +68,13 @@ function reducer(state, action) {
       };
     }
     case 'SHUFFLE_AVATAR': {
+      const others = state.participants
+        .filter((p) => p.id !== action.id)
+        .map((p) => p.avatar);
       return {
         ...state,
         participants: state.participants.map((p) =>
-          p.id === action.id ? { ...p, avatar: nextRandomAvatar(p.avatar) } : p,
+          p.id === action.id ? { ...p, avatar: leastUsedAvatar(others) } : p,
         ),
       };
     }
@@ -75,12 +87,14 @@ function reducer(state, action) {
       };
     }
     case 'RANDOMIZE_ALL_AVATARS': {
+      const used = [];
       return {
         ...state,
-        participants: state.participants.map((p) => ({
-          ...p,
-          avatar: nextRandomAvatar(p.avatar),
-        })),
+        participants: state.participants.map((p) => {
+          const avatar = leastUsedAvatar(used);
+          used.push(avatar);
+          return { ...p, avatar };
+        }),
       };
     }
     case 'SET_CONFIG': {
@@ -111,6 +125,7 @@ function reducer(state, action) {
         ...state,
         tournament,
         results: {},
+        startedAt: Date.now(),
         kotb,
         slushieBreak: false,
         motivationBreak: false,
@@ -210,7 +225,7 @@ function reducer(state, action) {
     }
     case 'RESET_BRACKET': {
       // Keep participants + config, clear the running tournament.
-      return { ...state, tournament: null, results: {}, kotb: null, slushieBreak: false, motivationBreak: false };
+      return { ...state, tournament: null, results: {}, startedAt: null, kotb: null, slushieBreak: false, motivationBreak: false };
     }
     case 'RESET_ALL': {
       return { ...initialState };

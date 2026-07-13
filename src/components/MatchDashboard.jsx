@@ -1,5 +1,5 @@
 import Avatar from './Avatar.jsx';
-import { getCurrentMatch, getNextMatch } from '../logic/engine.js';
+import { getCurrentMatches, getNextMatch } from '../logic/engine.js';
 
 function BigPlayer({ player, align }) {
   return (
@@ -10,11 +10,39 @@ function BigPlayer({ player, align }) {
   );
 }
 
-export default function MatchDashboard({ live, participantsById, title = 'VR Tischtennis Cup' }) {
+function TableCard({ match, index, participantsById }) {
+  const a = participantsById[match.playerA];
+  const b = participantsById[match.playerB];
+  return (
+    <div className="table-card">
+      <div className="table-card-head">Platte {index + 1}</div>
+      <div className="table-card-body">
+        <div className="table-player" style={{ '--accent': a?.color }}>
+          <Avatar avatar={a?.avatar} color={a?.color} size="clamp(48px, 12vh, 130px)" />
+          <span className="table-name">{a?.name ?? 'TBD'}</span>
+        </div>
+        <span className="table-vs">VS</span>
+        <div className="table-player" style={{ '--accent': b?.color }}>
+          <Avatar avatar={b?.avatar} color={b?.color} size="clamp(48px, 12vh, 130px)" />
+          <span className="table-name">{b?.name ?? 'TBD'}</span>
+        </div>
+      </div>
+      <div className="table-card-foot">{match.roundName}</div>
+    </div>
+  );
+}
+
+export default function MatchDashboard({ live, participantsById, title = 'VR Tischtennis Cup', tables = 1 }) {
   const { matches, champion: championId, progress } = live;
   const champion = participantsById[championId];
-  const current = getCurrentMatch(matches);
-  const next = getNextMatch(matches, current?.id);
+  const currents = getCurrentMatches(matches, Math.max(1, tables));
+  const multi = tables > 1 && currents.length > 1;
+  const current = currents[0] || null;
+  const currentIds = new Set(currents.map((m) => m.id));
+  const next =
+    matches.find(
+      (m) => !m.bye && !m.winner && m.playerA && m.playerB && !currentIds.has(m.id),
+    ) || getNextMatch(matches, current?.id);
 
   const nextA = participantsById[next?.playerA];
   const nextB = participantsById[next?.playerB];
@@ -25,7 +53,16 @@ export default function MatchDashboard({ live, participantsById, title = 'VR Tis
         <h1 className="event-title">{title}</h1>
       </header>
 
-      {current ? (
+      {multi ? (
+        <div className="dash-tables">
+          <div className="phase-banner">{current.roundName}</div>
+          <div className={`tables-grid tables-${Math.min(currents.length, 4)}`}>
+            {currents.map((m, i) => (
+              <TableCard key={m.id} match={m} index={i} participantsById={participantsById} />
+            ))}
+          </div>
+        </div>
+      ) : current ? (
         <>
           <div className="phase-banner">{current.roundName}</div>
           <div className="dash-match">

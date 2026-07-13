@@ -8,11 +8,17 @@ import MotivationBreak from './MotivationBreak.jsx';
 import WinnerScreen from './WinnerScreen.jsx';
 import MatchCelebration from './MatchCelebration.jsx';
 import CrownBeamer from './CrownBeamer.jsx';
+import EventClock from './EventClock.jsx';
+import MatchIntro from './MatchIntro.jsx';
+import PodiumScreen from './PodiumScreen.jsx';
 import { MODES } from '../logic/formats.js';
+import { getPodium } from '../logic/engine.js';
+import { playDing, playFanfare, playWhoosh } from '../logic/sound.js';
 
 const SWITCH_INTERVAL = 20000; // 20 seconds
 const CELEBRATE_MS = 5000; // confetti celebration screen
 const HIGHLIGHT_MS = 7000; // animated highlight afterwards
+const INTRO_MS = 3600; // match intro overlay
 
 // Derive the current view from the shared wall clock so that every beamer
 // window flips at the exact same moment – no cross-window messaging needed.
@@ -112,12 +118,26 @@ export default function BeamerView({ state, live, participantsById }) {
   const champion = participantsById[live.champion];
   const matches = live.matches;
   const title = state.config?.title || 'VR Tischtennis Cup';
+  const tables = state.config?.tables || 1;
+  const soundOn = state.config?.soundOn;
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
+  const current =
+    matches.find((m) => !m.bye && m.playerA && m.playerB && !m.winner) || null;
 
-  // Reset celebration tracking whenever a tournament starts / is reset.
+  const [introMatch, setIntroMatch] = useState(null);
+  const [finishView, setFinishView] = useState('winner');
+  const introSeenRef = useRef(null);
+  const championSoundedRef = useRef(false);
+
+  // Reset transient beamer state whenever a tournament starts / is reset.
   useEffect(() => {
     seenRef.current = null;
+    introSeenRef.current = null;
+    championSoundedRef.current = false;
     setCelebration(null);
     setHighlightId(null);
+    setIntroMatch(null);
   }, [state.tournament]);
 
   // Detect a newly won match and kick off the celebration – but not the match
@@ -141,6 +161,7 @@ export default function BeamerView({ state, live, participantsById }) {
           : `${latest.scoreB}:${latest.scoreA}`;
       setHighlightId(null);
       setCelebration({ matchId: latest.id, winner, scoreText, roundName: latest.roundName });
+      if (soundOnRef.current) playDing();
     }
   }, [matches, participantsById, live.champion]);
 
@@ -159,6 +180,24 @@ export default function BeamerView({ state, live, participantsById }) {
     const id = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
     return () => clearTimeout(id);
   }, [highlightId]);
+
+  // Champion fanfare (once) + alternate winner / podium screen.
+  useEffect(() => {
+    if (champion && !championSoundedRef.current) {
+      championSoundedRef.current = true;
+      if (soundOnRef.current) playFanfare();
+    }
+  }, [champion]);
+
+  useEffect(() => {
+    if (!champion) return undefined;
+    setFinishView('winner');
+    const id = setInterval(
+      () => setFinishView((v) => (v === 'winner' ? 'podium' : 'winner')),
+      15000,
+    );
+    return () => clearInterval(id);
+  }, [champion]);
 
   const showLoop =
     Boolean(state.tournament) &&
@@ -183,8 +222,29 @@ export default function BeamerView({ state, live, participantsById }) {
     return () => clearTimeout(timeoutId);
   }, [showLoop]);
 
+  // Single-table match intro when a new current match appears.
+  useEffect(() => {
+    if (tables > 1 || !showLoop) return;
+    if (current && current.id !== introSeenRef.current) {
+      introSeenRef.current = current.id;
+      setIntroMatch(current);
+      if (soundOnRef.current) playWhoosh();
+    }
+  }, [showLoop, current, tables]);
+
+  useEffect(() => {
+    if (!introMatch) return undefined;
+    const id = setTimeout(() => setIntroMatch(null), INTRO_MS);
+    return () => clearTimeout(id);
+  }, [introMatch]);
+
   if (champion) {
-    return <WinnerScreen champion={champion} title={title} />;
+    const showPodium = finishView === 'podium' && getPodium(live).length >= 2;
+    return showPodium ? (
+      <PodiumScreen live={live} participantsById={participantsById} title={title} />
+    ) : (
+      <WinnerScreen champion={champion} title={title} />
+    );
   }
 
   if (celebration) {
@@ -219,13 +279,21 @@ export default function BeamerView({ state, live, participantsById }) {
     );
   }
 
-  const current = matches.find((m) => !m.bye && m.playerA && m.playerB && !m.winner);
-
   return (
     <div className="beamer-wrap">
-      <div className="beamer-fade" key={`${view}-${highlightId ?? ''}`}>
-        {view === 'dashboard' ? (
-          <MatchDashboard live={live} participantsById={participantsById} title={title} />
+      <div
+        className="beamer-fade"
+        key={introMatch ? `intro-${introMatch.id}` : `${view}-${highlightId ?? ''}`}
+      >
+        {introMatch ? (
+          <MatchIntro match={introMatch} participantsById={participantsById} />
+        ) : view === 'dashboard' ? (
+          <MatchDashboard
+            live={live}
+            participantsById={participantsById}
+            title={title}
+            tables={tables}
+          />
         ) : (
           <Overview
             live={live}
@@ -236,10 +304,13 @@ export default function BeamerView({ state, live, participantsById }) {
           />
         )}
       </div>
-      <div className="view-dots" aria-hidden="true">
-        <span className={view === 'dashboard' ? 'dot active' : 'dot'} />
-        <span className={view === 'overview' ? 'dot active' : 'dot'} />
-      </div>
+      {!introMatch && (
+        <div className="view-dots" aria-hidden="true">
+          <span className={view === 'dashboard' ? 'dot active' : 'dot'} />
+          <span className={view === 'overview' ? 'dot active' : 'dot'} />
+        </div>
+      )}
+      <EventClock startedAt={state.startedAt} minutes={state.config?.minutes} />
       <div className="beamer-mode-tag">{MODES[live.format]?.short}</div>
     </div>
   );

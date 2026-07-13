@@ -163,7 +163,7 @@ function koSlots(order, size) {
 // Standard single-elimination seeding order: returns, for a bracket of `size`,
 // the 1-indexed seed sitting in each slot (so seed 1 and seed 2 land on opposite
 // ends and byes for surplus seeds spread to the top seeds).
-function seedOrder(size) {
+export function seedOrder(size) {
   let seeds = [1, 2];
   while (seeds.length < size) {
     const sum = seeds.length * 2 + 1;
@@ -480,6 +480,22 @@ export function getCurrentMatch(matches) {
   );
 }
 
+// Up to `n` matches that could run in parallel (one per table): playable,
+// unplayed, and with no shared players.
+export function getCurrentMatches(matches, n = 1) {
+  const result = [];
+  const busy = new Set();
+  for (const m of matches) {
+    if (result.length >= n) break;
+    if (m.bye || !m.playerA || !m.playerB || m.winner) continue;
+    if (busy.has(m.playerA) || busy.has(m.playerB)) continue;
+    result.push(m);
+    busy.add(m.playerA);
+    busy.add(m.playerB);
+  }
+  return result;
+}
+
 export function getNextMatch(matches, currentId) {
   const start = currentId ? matches.findIndex((m) => m.id === currentId) + 1 : 0;
   for (let i = start; i < matches.length; i += 1) {
@@ -492,6 +508,43 @@ export function getNextMatch(matches, currentId) {
 // All matches that can currently be edited (ready or already decided).
 export function playableMatches(matches) {
   return matches.filter((m) => !m.bye && m.playerA && m.playerB);
+}
+
+// Final podium (up to places 1–3) derived per format for the closing screen.
+export function getPodium(live) {
+  const { format, standings, matches, groups } = live;
+  if ((format === 'round_robin' || format === 'swiss') && standings?.length) {
+    return standings.slice(0, 3).map((s, i) => ({ id: s.id, place: i + 1 }));
+  }
+  const ko = matches.filter((m) => m.phase === 'ko');
+  if (ko.length) {
+    const maxRound = Math.max(...ko.map((m) => m.round));
+    const final = ko.find((m) => m.round === maxRound);
+    const res = [];
+    if (final?.winner) {
+      res.push({ id: final.winner, place: 1 });
+      const runnerUp = final.winner === final.playerA ? final.playerB : final.playerA;
+      if (runnerUp) res.push({ id: runnerUp, place: 2 });
+      ko.filter((m) => m.round === maxRound - 1 && m.winner).forEach((m) => {
+        const loser = m.winner === m.playerA ? m.playerB : m.playerA;
+        if (loser) res.push({ id: loser, place: 3 });
+      });
+    }
+    return res.slice(0, 4);
+  }
+  const fin = matches.find((m) => m.id === 'final-0');
+  if (fin?.winner) {
+    const runnerUp = fin.winner === fin.playerA ? fin.playerB : fin.playerA;
+    const res = [{ id: fin.winner, place: 1 }];
+    if (runnerUp) res.push({ id: runnerUp, place: 2 });
+    if (groups?.length) {
+      const seconds = groups.map((g) => g.standings[1]).filter(Boolean);
+      seconds.sort((a, b) => b.pts - a.pts || b.diff - a.diff);
+      seconds.slice(0, 2).forEach((s) => res.push({ id: s.id, place: 3 }));
+    }
+    return res.slice(0, 4);
+  }
+  return [];
 }
 
 export function validateScore(a, b, match) {

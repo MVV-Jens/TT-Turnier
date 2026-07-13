@@ -67,3 +67,37 @@ export function nextRandomAvatar(current) {
   }
   return candidate;
 }
+
+function countBy(list, keyFn) {
+  const m = new Map();
+  list.filter(Boolean).forEach((x) => {
+    const k = keyFn(x);
+    m.set(k, (m.get(k) || 0) + 1);
+  });
+  return m;
+}
+
+// Picks the avatar currently least represented among `used` – keeps a field of
+// participants visually distinct instead of repeating the same emoji.
+export function leastUsedAvatar(used = []) {
+  const counts = countBy(used, (a) => `${a.set}:${a.key}`);
+  let min = Infinity;
+  ALL_AVATARS.forEach((a) => {
+    const c = counts.get(`${a.set}:${a.key}`) || 0;
+    if (c < min) min = c;
+  });
+  const candidates = ALL_AVATARS.filter((a) => (counts.get(`${a.set}:${a.key}`) || 0) === min);
+  return pick(candidates);
+}
+
+// Picks the accent color currently least used among `used`.
+export function leastUsedColor(used = []) {
+  const counts = countBy(used, (c) => c);
+  let min = Infinity;
+  ACCENT_COLORS.forEach((c) => {
+    const n = counts.get(c) || 0;
+    if (n < min) min = n;
+  });
+  const candidates = ACCENT_COLORS.filter((c) => (counts.get(c) || 0) === min);
+  return pick(candidates);
+}

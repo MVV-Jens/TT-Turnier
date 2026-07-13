@@ -7,7 +7,7 @@
 // Phase 2 (ko): the top N crown collectors play a normal single-elimination
 // bracket, reusing the generalized KO builder from engine.js.
 
-import { buildKO } from './engine.js';
+import { buildKO, seedOrder } from './engine.js';
 
 // Format a millisecond duration as m:ss (never negative).
 export function formatClock(ms) {
@@ -42,22 +42,6 @@ export function adaptiveAdvance(players) {
   if (players >= 8) return 8;
   if (players >= 4) return 4;
   return 2;
-}
-
-// Standard single-elimination seeding order (1-based seeds) for a bracket of
-// `size` players: seed 1 meets the lowest seed, top seeds only meet late.
-export function seedOrder(size) {
-  let seeds = [1];
-  while (seeds.length < size) {
-    const n = seeds.length * 2;
-    const next = [];
-    for (const s of seeds) {
-      next.push(s);
-      next.push(n + 1 - s);
-    }
-    seeds = next;
-  }
-  return seeds;
 }
 
 // Plan the cut into the KO. Returns which players auto-qualify, which are tied

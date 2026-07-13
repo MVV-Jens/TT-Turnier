@@ -2,20 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import Avatar from './Avatar.jsx';
 import { getCurrentMatch, playableMatches, validateScore } from '../logic/engine.js';
 
-function PlayerLine({ player, score, onScore, side }) {
+function PlayerLine({ player, score, onScore, side, onBump }) {
   return (
     <div className="result-player" style={{ '--accent': player?.color }}>
       <Avatar avatar={player?.avatar} color={player?.color} size={52} />
       <span className="result-player-name">{player?.name ?? '—'}</span>
-      <input
-        className="score-input"
-        type="number"
-        min="0"
-        inputMode="numeric"
-        aria-label={`Ergebnis ${side}`}
-        value={score}
-        onChange={(e) => onScore(e.target.value)}
-      />
+      <div className="score-stepper">
+        <button type="button" className="stepper-btn" aria-label="minus" onClick={() => onBump(-1)}>
+          −
+        </button>
+        <input
+          className="score-input"
+          type="number"
+          min="0"
+          inputMode="numeric"
+          aria-label={`Ergebnis ${side}`}
+          value={score}
+          onChange={(e) => onScore(e.target.value)}
+        />
+        <button type="button" className="stepper-btn" aria-label="plus" onClick={() => onBump(1)}>
+          +
+        </button>
+      </div>
     </div>
   );
 }
@@ -75,6 +83,22 @@ export default function ResultEntry({ state, dispatch, live, participantsById })
     dispatch({ type: 'SET_RESULT', matchId: selected.id, a: Number(scoreA), b: Number(scoreB) });
   };
 
+  const winTarget = isBo3 ? 2 : selected.target;
+  const bump = (setter, cur, delta) =>
+    setter(String(Math.max(0, (parseInt(cur, 10) || 0) + delta)));
+  const quickWin = (side) => {
+    const loser = side === 'A' ? scoreB : scoreA;
+    const keepLoser =
+      loser !== '' && Number.isInteger(Number(loser)) && Number(loser) < winTarget;
+    if (side === 'A') {
+      setScoreA(String(winTarget));
+      setScoreB(keepLoser ? loser : '0');
+    } else {
+      setScoreB(String(winTarget));
+      setScoreA(keepLoser ? loser : '0');
+    }
+  };
+
   return (
     <section className="panel">
       <div className="panel-head">
@@ -116,10 +140,31 @@ export default function ResultEntry({ state, dispatch, live, participantsById })
         )}
       </p>
 
+      <div className="quick-win">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => quickWin('A')}>
+          🏓 {playerA?.name ?? 'A'} gewinnt
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => quickWin('B')}>
+          🏓 {playerB?.name ?? 'B'} gewinnt
+        </button>
+      </div>
+
       <div className="result-grid">
-        <PlayerLine player={playerA} score={scoreA} onScore={setScoreA} side="A" />
+        <PlayerLine
+          player={playerA}
+          score={scoreA}
+          onScore={setScoreA}
+          side="A"
+          onBump={(d) => bump(setScoreA, scoreA, d)}
+        />
         <span className="result-vs">:</span>
-        <PlayerLine player={playerB} score={scoreB} onScore={setScoreB} side="B" />
+        <PlayerLine
+          player={playerB}
+          score={scoreB}
+          onScore={setScoreB}
+          side="B"
+          onBump={(d) => bump(setScoreB, scoreB, d)}
+        />
       </div>
 
       {!validation.ok && (scoreA !== '' || scoreB !== '') && (
