@@ -45,3 +45,13 @@ geöffnet werden.
 
 - React + Vite (Single-Page-App), reines CSS, keine Laufzeit-Abhängigkeiten.
 - Persistenz über Local Storage (`vr-tt-cup-2026`).
+
+## Basic Auth
+
+Dev- und Preview-Server werden per Basic Auth gesch�tzt, wenn die Variablen `BASIC_AUTH_USER` und `BASIC_AUTH_PASSWORD` gesetzt sind (Umgebungsvariablen oder `.env.local`):
+
+```
+BASIC_AUTH_USER=admin
+BASIC_AUTH_PASSWORD=geheim
+```
+
